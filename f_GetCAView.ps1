@@ -106,7 +106,7 @@ function Get-CAView
         [Parameter(ParameterSetName='Crl_Schema', Mandatory=$true)]
         [Switch]$GetSchema,
 
-        [String]$CAConfig
+        [String]$Config
     )
 
     Begin
@@ -116,14 +116,14 @@ function Get-CAView
         ########
 
         # https://docs.microsoft.com/en-us/windows/win32/api/certcli/nf-certcli-icertconfig-getconfig
-        enum CC
+        enum CONFIG
         {
-            DEFAULTCONFIG           = 0x00000000
-            UIPICKCONFIG            = 0x00000001
-            FIRSTCONFIG             = 0x00000002
-            LOCALCONFIG             = 0x00000003
-            LOCALACTIVECONFIG       = 0x00000004
-            UIPICKCONFIGSKIPLOCALCA = 0x00000005
+            DEFAULT           = 0x00000000
+            UIPICK            = 0x00000001
+            FIRST             = 0x00000002
+            LOCAL             = 0x00000003
+            LOCALACTIVE       = 0x00000004
+            UIPICKSKIPLOCALCA = 0x00000005
         }
 
         # https://docs.microsoft.com/en-us/windows/win32/api/certview/nf-certview-icertview-setrestriction
@@ -202,19 +202,19 @@ function Get-CAView
         $Extensions = Invoke-Command -ScriptBlock $MyInvocation.MyCommand.Parameters.Item("Name").Attributes.ScriptBlock `
                                      -ArgumentList @($null, $null, $null, $null, @{ GetHashTable = $True })
 
-        ##################
-        # Check CA config
-        ##################
+        ###################
+        # Get local config
+        ###################
 
-        if (-not $CAConfig)
+        if (-not $Config)
         {
             # Get CA config
             $CA = New-Object -ComObject CertificateAuthority.GetConfig
-            $CAConfig = $CA.GetConfig([CC]::LOCALCONFIG)
+            $Config = $CA.GetConfig([CONFIG]::LOCAL)
 
-            if (-not $CAConfig)
+            if (-not $Config)
             {
-                throw "Can't find certificate authority config string, please use -CAConfig parameter."
+                throw "Can't find local certificate authority, please use -Config parameter."
             }
         }
 
@@ -225,7 +225,7 @@ function Get-CAView
         try
         {
             $CaView = New-Object -ComObject CertificateAuthority.View
-            $CaView.OpenConnection($CAConfig)
+            $CaView.OpenConnection($Config)
         }
         catch [Exception]
         {
@@ -540,8 +540,8 @@ function Get-CAView
 # SIG # Begin signature block
 # MIIY9AYJKoZIhvcNAQcCoIIY5TCCGOECAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUMKYhFeIqaAxe8rAjEdg691o0
-# I9agghJ3MIIE9zCCAt+gAwIBAgIQJoAlxDS3d7xJEXeERSQIkTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU51pzEKVuflmzgPnJvrIGLKIB
+# +iigghJ3MIIE9zCCAt+gAwIBAgIQJoAlxDS3d7xJEXeERSQIkTANBgkqhkiG9w0B
 # AQsFADAOMQwwCgYDVQQDDANiY2wwHhcNMjAwNDI5MTAxNzQyWhcNMjIwNDI5MTAy
 # NzQyWjAOMQwwCgYDVQQDDANiY2wwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIK
 # AoICAQCu0nvdXjc0a+1YJecl8W1I5ev5e9658C2wjHxS0EYdYv96MSRqzR10cY88
@@ -642,34 +642,34 @@ function Get-CAView
 # RxdbbxPaahBuH0m3RFu0CAqHWlkEdhGhp3cCExwxggXnMIIF4wIBATAiMA4xDDAK
 # BgNVBAMMA2JjbAIQJoAlxDS3d7xJEXeERSQIkTAJBgUrDgMCGgUAoHgwGAYKKwYB
 # BAGCNwIBDDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAc
-# BgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUtu7b
-# RbjKjggUvunxXwXOdXkc5k4wDQYJKoZIhvcNAQEBBQAEggIAFdrpB2wmu9tkaGYQ
-# 6lug33eACGjWfrI71ifm+tWt+HwNftL/00Yx598Td9rfAH5+11aBP7zYWYfyRvc8
-# rIJycAY1OZ4IJP+yas4yPAHREPBYF1uQiBbxL896zRPfTfDX0eLJsORcmY0k3vsK
-# 6B+jgz5VWcYR2TYVUokLdIJnmRz3mqpgzv+nAkhRchLJ9b3uGZyVfJmKHABSYoiC
-# cx/sxUNcde5k2+RbLmtZH5KQCJKK5loOZqiNW6CI0eT1qL7ZFZhDJLl7wuxUMhO6
-# M61d3AxtIcnlnQShdGsDlwU7gGLabaXmkw7kmwXP5W4xh/NHOJKJBCT2ixDFvBh1
-# F8hTGHnragYqAETiX50ZugO4w6mtj3EsZfkoD7vrYp2LFTUmF0ZAXVUhhEw2gXCn
-# Wj/LjT8PyP0Gna8+4eXodLxcFSYeAkI0ku2wr9GYTTf25xRU8sTPzjhPAfTaExHW
-# UO4ZulKEnhh5fEpfNHlc7Tit4jHShcwmIz2YYolAfigJVCU3hckmsktQ05eVoZTG
-# e2uT//PX5lc8DnnZw6mab4FHveXWFHIe6nI+sjXJN+yHkIsLL2uf5vfjw3I0qCfL
-# lF3sHl3RYgo64ylF4vAYx/E3trt0qf1Al1PWN0I0PwOOGrhMIv/aChbdcsgycKi9
-# t4rmW5BQKNaUzQa9b3sd5FPy09qhggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkC
+# BgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUfq3o
+# md4KsPohmm+xydk7YaK/yfgwDQYJKoZIhvcNAQEBBQAEggIANYMEnRVW0QrAGxTn
+# /LCHwNKfd7o88m7jgzt97fsTHQ+dW8mmNsM+6msLhKOSkFNxoizAD8Ks0zgkKjGL
+# xERjKFTaer1o278h1KlwVdE9qiMYmzovX6BhKz6UF7smEzeD5kt0V31JCGTY6rpn
+# /bZU0ORqQQiDZEwbG1Lh5KM9rEQfnliyaNrQzPBwNjSFLmIFZ8mZog5LZY6VfGs0
+# tOdhl3qWQNVKfcmwVxuMohTsgm4rKehxr8HbL231Cskne7dhrpNg/nUVQaJD5wT1
+# GkeuHWSs5okQJqxmDm4/+6AZBMHQBRy4U6wmM56El9xwCb59AvjaaEGCQa+GjTdO
+# QWJ4RBBz0viKiHqiUC5lkRKVHFsydBPA+T3ZmlmaRiI4SzIJ9jrqTUWn/wftT6QT
+# F+Qnpz++jKdDbiF48bVwL0qfn7Dw2/FkuAoOHPJEyRXmW6epxE2JILLdJmTZEl0c
+# oOmSUTMtmP192z7FPUw1dPIe9g8hiiim9w6djzsuLnP6L2vdgw7XzionmS8jQEnF
+# 3w1EmigI0Znm5Ly7Qsc3X34lTMkvH5e5raYH9CaKh0/WxDH7P+GVAg7XJ4Nc8Nnh
+# kA2h2qzbK3MHhFZsQjIbto6vY7Eiu8bzZbXs60cfLpbrlX3oVBRZeqC5aHjvkjUk
+# D2tmrPC/5ldOCsru8ofI+HhYYPehggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkC
 # AQEwdzBjMQswCQYDVQQGEwJVUzEXMBUGA1UEChMORGlnaUNlcnQsIEluYy4xOzA5
 # BgNVBAMTMkRpZ2lDZXJ0IFRydXN0ZWQgRzQgUlNBNDA5NiBTSEEyNTYgVGltZVN0
 # YW1waW5nIENBAhAKekqInsmZQpAGYzhNhpedMA0GCWCGSAFlAwQCAQUAoGkwGAYJ
-# KoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNDI1MTM0
-# OTEyWjAvBgkqhkiG9w0BCQQxIgQgitSEg7zu50VHEzrBvGXrBoYe207G4CRJHnzP
-# +ueH7PUwDQYJKoZIhvcNAQEBBQAEggIAU7VgrULEqgMyidf7YFey5a8Dd8McEF1d
-# r2MJrs3kwZ7HEYjk54e7Eohd4gBTqvVYItqSwbSHgnd/lIoZf+s5LCPvFqNfUu6p
-# 7Zk/qKwH/AgD3uBQFGNCWjdvDyZjo5Q/QlW+qf0YRvyh+EFf4Oi3EUrreaKOwYfc
-# XU/4G0WOH5vX4VvTfQmNpdXjhzzNyIrfu8fTkLhA18PSL533bcFOsulNEbON1f2Q
-# p/8KEX0gkp8QeE82GV1VT4iQgsDLrAHiAMqNibtJV5KtjYO1gMlRkxZagOFfge6X
-# /MRCRxs26jpfE25BnUq/uBLsTM3RZlZZoclmX6wck2fRhKbSWMHPYwMl+29LXemo
-# vNUKy3FkZx600Any/fh7p2j+qCOGCsDE/I2DdVNWFY4fU87QjQlW/A1ubhUDaN4I
-# hp3F1yn3rZJERCaJCGGCZtHAiOMeXKXkbSiMqk54HYX8tq+l+GzMzdEOySVQqSys
-# 9515gM08ebJwfxh27dRs0q8Lxf1tjyUAbBWVBnsjJB/WaXkA3oZu3+q64bynd+eE
-# 7HDiMLS/QRHVBDZ43kR1gq90qWkgyhUg4upy7tV7szlKdyK89efN0pMf/lPCp8p8
-# yTSEmtvuQtFRx5hQwF5/hEd6G2zXC92zjPCZ6A10NB3/PwZzksjXVxhlq85ht3y4
-# Jacm0OS76vk=
+# KoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNDI1MTcw
+# MDAzWjAvBgkqhkiG9w0BCQQxIgQglV1yKGTJk1Oq8glzd5N2AqMQ3fxJ5SJeJ2eO
+# bxnxv1swDQYJKoZIhvcNAQEBBQAEggIAZvplYoVVhTth1vju+FzN0JoH7sx0jv7H
+# a3AMBKk4lkxcSvmRi33KaGYVVCoD24zwFtDXTG5Ywx507R0h4DNYM7M7gmPyADy0
+# 2LTRpUOJJCHKNAYQIPLL2nYZyD/iYPuMHLDtLIR3NZBjQKop11wPWG37RdLDEDaj
+# fgoL81XwXOvIgZvNAyq0aypMib8cgCbYw4DYI0wpweV/xoVvHfX8JhRZJl46p2GT
+# 1ze62FDoWyOEJLccSt+Zqks2+ab6tR55zmXF3FGFVNZLOqosH6yoIVhPuOnKsbop
+# GPLck5O2mCWeG00VhevJcVPl8vy7lSqHcXN0S6sA48Wf4+DjP99RgUdqP4LewYLD
+# RwpPjsh+itBRtvT0B++5b7Ig5/nLzg7POiNQEb9ikChfLArHeMVMyRe/2Mzt1h5g
+# T0fAWBXeiOkl36vqyRECLBz8Bfy6TWSFufWmo3gdCplzC4gG8pqjOq8WZ1IUh4cg
+# CLSx94+fxTund6Uo8+sAyhSno5RU7mvfuyzSe07Zi5wMlw19+NaVJo3aVl0k2veF
+# JtNwLa/zTdn794RuFeG21F24s0NRtEEL1gs6zdqoBGFqMxkF9wKj/RFBktmuaGQ5
+# pYQxgt35SC9PP6TFLooWdRhkGxUiIaISxGq2GAxfMW4qfvDGhD94jzDxX8gkEXzJ
+# zkl8JA+ZHH4=
 # SIG # End signature block
