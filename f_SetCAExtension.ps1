@@ -70,23 +70,23 @@ function Set-CAExtension
         ########
 
         # https://docs.microsoft.com/en-us/windows/win32/api/certcli/nf-certcli-icertconfig-getconfig
-        enum CONFIG
+        enum CC_CONFIG
         {
-            DEFAULT           = 0x00000000
-            UIPICK            = 0x00000001
-            FIRST             = 0x00000002
-            LOCAL             = 0x00000003
-            LOCALACTIVE       = 0x00000004
-            UIPICKSKIPLOCALCA = 0x00000005
+            DEFAULT           = 0x0
+            UIPICK            = 0x1
+            FIRST             = 0x2
+            LOCAL             = 0x3
+            LOCALACTIVE       = 0x4
+            UIPICKSKIPLOCALCA = 0x5
         }
 
-        # https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-wcce/7c715f9f-db50-41c3-abfc-0021c6390d4e
+        # https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-wcce/8116912a-59e6-4849-83dd-77b39b6370e0
         enum PROPTYPE
         {
-            LONG     = 0x00000001
-            DATETIME = 0x00000002
-            BINARY   = 0x00000003
-            STRING   = 0x00000004
+            LONG     = 0x1
+            DATETIME = 0x2
+            BINARY   = 0x3
+            STRING   = 0x4
         }
 
         # https://docs.microsoft.com/en-us/windows/win32/api/certif/nf-certif-icertserverexit-getcertificateextensionflags
@@ -159,7 +159,7 @@ function Set-CAExtension
         {
             # Get config
             $CA = New-Object -ComObject CertificateAuthority.GetConfig
-            $Config = $CA.GetConfig([CONFIG]::LOCAL)
+            $Config = $CA.GetConfig([CC_CONFIG]::LOCAL)
 
             if (-not $Config)
             {
@@ -345,8 +345,8 @@ function Set-CAExtension
 # SIG # Begin signature block
 # MIIY9AYJKoZIhvcNAQcCoIIY5TCCGOECAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUGxBsXdou2G4s6U09lKsZ3hRA
-# EbOgghJ3MIIE9zCCAt+gAwIBAgIQJoAlxDS3d7xJEXeERSQIkTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUCl6yRyf0FCdz+90aDHm4tJG/
+# 4ROgghJ3MIIE9zCCAt+gAwIBAgIQJoAlxDS3d7xJEXeERSQIkTANBgkqhkiG9w0B
 # AQsFADAOMQwwCgYDVQQDDANiY2wwHhcNMjAwNDI5MTAxNzQyWhcNMjIwNDI5MTAy
 # NzQyWjAOMQwwCgYDVQQDDANiY2wwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIK
 # AoICAQCu0nvdXjc0a+1YJecl8W1I5ev5e9658C2wjHxS0EYdYv96MSRqzR10cY88
@@ -447,34 +447,34 @@ function Set-CAExtension
 # RxdbbxPaahBuH0m3RFu0CAqHWlkEdhGhp3cCExwxggXnMIIF4wIBATAiMA4xDDAK
 # BgNVBAMMA2JjbAIQJoAlxDS3d7xJEXeERSQIkTAJBgUrDgMCGgUAoHgwGAYKKwYB
 # BAGCNwIBDDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAc
-# BgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUTWy1
-# BOGse43QdR510LokUnY3TNIwDQYJKoZIhvcNAQEBBQAEggIAKDHLbTE5SDzxtHJT
-# D9R53a/Oqf//5PldlWAnA2oSRvyA2xFm+apG5upXFeDVUDAAO0Zm1fEGgo7G/I2D
-# TKudZOddT3ROW5i8ZnsHhUKqN+kmAeEwB3lpcLwP2/fjxIrKxjXGWwWaBdaRH/9c
-# W1RnB3u2SCnmMqwJytqWL5xrvzX0bRMi3oAj+ghH5b69DwEaGWbbq0ooCBPPYIsJ
-# KqbMUrAOOnkZJu2C2Z5Rjmkb/Flg/9McdTx2X+SSPdmqeLs6UKWixeqaw5ikktpF
-# UTlNRpwpnTdfxdCNf6IhZTCt0t+r5FWHaO/1u7R30MxdHQJpgHFXIrLhIPrFjOo1
-# jaE3CArB1zTrpXEYbtgU0rsb9ZdbhpjG5GcDT45l6EUQNthzSpdovy6jNqp94IK5
-# +cwCNUUcP69+Lx3cWxWP0BFh7azdVhQVdY+nBnKFDnIj2UXbbI8t+pXq/BOa2aRU
-# 31WvCzRA+ATI4VxyYMK0hGyIYZDXcQ0LTjkDjuRgMp0rFj1D1XLYAj63RPd5P2Mw
-# ztrYiNFeP7sS/AA67K+hcFMngAg8ssuHooFlQynIdqKLaG+FXvR4lV8l2sm5hKSo
-# NT3at4vi4KSB8AqIfxU74YtluGHI6LDWyAyjcg8W7hb9EPMTWIt91l4BQKIM8Del
-# GtwSFCyJy48ZBgbycmrHyRaTyEChggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkC
+# BgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUBm+t
+# mAf/18bQxESj46W9sJ6fMf0wDQYJKoZIhvcNAQEBBQAEggIABaySw6nSlaerAt8v
+# hrD2FuJGZWv7tGsik6V2mhlYkQdWivz+6qkjCIGnkBfG9RkEltIVyf8/olHX61AX
+# cTPG189rEBRnZV8qaQoqKw9LOGuhejHvPp0YNJN1H78r3f4klaWzVySr6CE4OsdJ
+# PMM9ueste2ibpcFcvBVk6FhI0eVGxhmL7Av2tpHXdlk+eJNVgB7gSYSzhLGqHsOK
+# 0zty3xy5mTKjxEOAJZT0qdVQjzLRbYZy3y0PVZQOZ/e8NgiFZQzwhY5Hs4zkOcea
+# KHGpfP9hQjoHMJaG3K8/qaD0/I6XPXufV9BV+HlyzD8//FnBwE311Wa9bkQqbBL4
+# uJJ1ykR9fIGpnmhcKR3+RUTQOLxQRP8XopSCsjXy9a2FqPGzz2O3nbWxsivSrqgv
+# aIXNJUoT6eDzFvhoyKiAPdNt94kGkseJJrRCX3Ur/Pm0cbBBqHkmJhhqR84SmWkA
+# aW+NcxZbvniALd+V5yl7cWfiJ6oDeo5u/6XSFClE4fcyw034BejoRb8z0TauNOXu
+# Y8QAfeOPsvLhgs9KLnbmw7k3QmDBe/Lv1n+b1IFl21I2ZYiG9PGjo3SQlSG8Ls9O
+# R1AIQ6cGe0zkXgW5d9dNB49trGnCyx40VeODPWx6KsU8/BG2VBpmgcB3VxPdZH1K
+# pr5dtOAnI8rGHOFDAneg9PmVDGGhggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkC
 # AQEwdzBjMQswCQYDVQQGEwJVUzEXMBUGA1UEChMORGlnaUNlcnQsIEluYy4xOzA5
 # BgNVBAMTMkRpZ2lDZXJ0IFRydXN0ZWQgRzQgUlNBNDA5NiBTSEEyNTYgVGltZVN0
 # YW1waW5nIENBAhAKekqInsmZQpAGYzhNhpedMA0GCWCGSAFlAwQCAQUAoGkwGAYJ
-# KoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNDI1MTcw
-# MDAzWjAvBgkqhkiG9w0BCQQxIgQg3biX8j9MqDcD7jm3YiRWjQbq5+py5bW7HmMR
-# HrEjqoowDQYJKoZIhvcNAQEBBQAEggIAIKALyRCgXpjdsYz/IafMc1anJUa/Wbt4
-# M+jbx5GDNWG8LCfeDTm+E84J6ngfGsgbcII0tYILZnG9enXCTMM3REyHE6zQLnnL
-# TvXfWjNVF/H2sQTRHQURm0hZEaeNKAsJBr1a59chBhG1p54eRwf3uEjP4R1VRNJP
-# MG9CinEuAFMeltRkODbOfFqiJgWzy0+2nMzynFwOHOLzExUGlGW2+Wrs8TryxuI5
-# dqrs8Jna2Cz68wdrLA+tp9kCWwcScLhMrenDE0LscZWJvgbXB6Tj2NqM0pJIQw4v
-# MMa3XlJfKSEUzny2bGw4KieJctzc5M7Z+8cUsRWQMJ7HPjGq2TEoqzy5FPvmAHy1
-# oGSbFFkHu1dm0b1m40rqzZnjxR7VRjvDOGR79YrwUWyYEBXkxe8y3CV0YZMqN3Uu
-# 0IJzPGlIemugPYpNcz4XpqSF5y1t//dpjaD+AJghuDNKsuyNbF5CFi0lv4/P2bPS
-# 2pnpojFUcWrjKgOvSYr8Wa0frFwxmTPiGdlTdfunFIYmibi38geWHOGcyrYwgcX5
-# 7pEgIxyZIqRbKAmiWiWrS6u94CkUixTlA+zCplkfjKq6/glXeQroLprerZM7xiyQ
-# HX5TWS1Dmu8KkJamWGsudGU/Gygmds97ky2cl16y50axlSHSkmHCmezB4nyfRRps
-# S2iTZUQlkXI=
+# KoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNDI1MjAw
+# MDAzWjAvBgkqhkiG9w0BCQQxIgQgv1FHgX6M55zft52q7v9Ldbn02D45bpuvUw8s
+# LK47xoYwDQYJKoZIhvcNAQEBBQAEggIANzx/d5rI1lrtQ/Ds451LYgoLJFza4rIY
+# 9WNTA6JjXmyr2DHJr7fQ+5HcMPHCHdD7X1RhhM4yeByc/QCLPZXP4h2NrnEZUD/P
+# AIZJftMjfhYm9ys/2WigCyVKP9+niLzckOhn+n1PQZ5oIHffEVRVi8zn4wT4AceU
+# AW80X5Z4PjJ9RhXi4cSuvuF/vQ+kK45b/A2DNCeAXEbpRDkAbWZIp9NbPLn8iViq
+# 6GzO0dj4OK5wLCHpmV+DF5H1NfKaXO5009ONW7k1FAOTYG3D4KXKBRX31GxowIAV
+# 8fkx6Q7t8kB+s9pNC6oeq1DUIckJviIzaO/a1nK9ILBeW/orYwFzAxzNiIllXigg
+# xHEGB2P3Nh9md5nBqoQtdcvs2eT9GqfPskdz92wEa/KKOo9nDxW6egQZi7x2yR/D
+# j83Z7ioojU3Z3z4FRyhSuXbxo5FHYOxdJZ1ywMYKxlsBPO5169WA0aAUD4HzssmA
+# w9WdG+2WI+47ymV6wvBiXO73dYMdP84wrwZ3vyGKletz0LVPs3YSlXsWwx2kY1A2
+# +nx4FAtKw/ycDCgHnq8GFBZNbeJ1CgVAxIySTiirPhw2Ah7aYyzPwRSHDgtO8s1S
+# 8pXCZGJqLbx3BRkSWPQbzOXKo1ZcB6FUD7v3rlKKez+anwM+TXSa8lYWpF5/IPEP
+# uDtASt6N4Vo=
 # SIG # End signature block
