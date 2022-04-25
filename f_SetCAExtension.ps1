@@ -1,16 +1,29 @@
 <#
  .SYNOPSIS
-    Set Certificate Authority Extension
+    Set Certificate Authority Extensions
 
  .DESCRIPTION
-    Connect to CA and set extension for pending request
+    Connect to CA and set extensions for pending request
 
  .EXAMPLE
-    Set key usage for digital signature and key encipherment
-    Set-CAExtension -RequestId <ID> -KeyUsage @([KEY_USAGE]::DIGITAL_SIGNATURE, [KEY_USAGE]::KEY_ENCIPHERMENT)
+    Get Key Usage enum
+    $KEY_USAGE = Set-CAExtension -GetKeyUsage
 
-    Set basic constraint Subject Type = ca and Path Length = None
+    Set Key Usage for Digital Signature and Key Encipherment
+    Set-CAExtension -RequestId <ID> -KeyUsage @($KEY_USAGE::DIGITAL_SIGNATURE, $KEY_USAGE::KEY_ENCIPHERMENT)
+
+    Get Alt Name enum
+    $ALT_NAME = Set-CAExtension -GetAltName
+
+    Set Subject Alternative Names
+    Set-CAExtension -RequestId <ID> -SubjectAlternativeNames @{ $ALT_NAME::DNS_NAME = 'fqdn' }
+
+    Set Basic Constraint Subject Type = CA and Path Length = None
     Set-CAExtension -RequestId <ID> -SubjectType CA -PathLength -1
+
+ .NOTES
+    Debug:
+    [Convert]::FromBase64String($X509Ext.RawData(1))
 
  .NOTES
     AUTHOR Jonas Henriksson
@@ -21,19 +34,31 @@
 
 function Set-CAExtension
 {
-    [cmdletbinding()]
+    [cmdletbinding(DefaultParameterSetName='Set')]
 
     Param
     (
-        [Parameter(Mandatory=$true)]
+        [Parameter(ParameterSetName='Set', Mandatory=$true)]
         [String]$RequestId,
 
+        [Parameter(ParameterSetName='Set')]
         [Array]$KeyUsage,
 
+        [Parameter(ParameterSetName='GetKeyUsage')]
+        [Switch]$GetKeyUsage,
+
+        [Parameter(ParameterSetName='Set')]
         [ValidateSet('CA', 'EndEntity')]
         [String]$SubjectType,
 
+        [Parameter(ParameterSetName='Set')]
         [Int]$PathLength,
+
+        [Parameter(ParameterSetName='Set')]
+        [Hashtable]$SubjectAlternativeNames,
+
+        [Parameter(ParameterSetName='GetAltName')]
+        [Switch]$GetAltName,
 
         [String]$Config
     )
@@ -65,10 +90,44 @@ function Set-CAExtension
         }
 
         # https://docs.microsoft.com/en-us/windows/win32/api/certif/nf-certif-icertserverexit-getcertificateextensionflags
-        enum EXTENSION
+        enum POLICY
         {
-            CRITICAL_FLAG = 0x1
-            DISABLE_FLAG  = 0x2
+            NON_CRITICAL = 0x0
+            CRITICAL     = 0x1
+            DISABLE      = 0x2
+        }
+
+        # https://msdn.microsoft.com/en-us/library/windows/desktop/aa379410.aspx
+        enum KEY_USAGE
+        {
+            NO                 = 0
+            DIGITAL_SIGNATURE  = 0x80
+            NON_REPUDIATION    = 0x40
+            KEY_ENCIPHERMENT   = 0x20
+            DATA_ENCIPHERMENT  = 0x10
+            KEY_AGREEMENT      = 0x8
+            KEY_CERT_SIGN      = 0x4
+            OFFLINE_CRL_SIGN   = 0x2
+            CRL_SIGN           = 0x2
+            ENCIPHER_ONLY      = 0x1
+            DECIPHER_ONLY      = 0x8000
+        }
+
+        # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/ne-certenroll-alternativenametype
+        enum ALT_NAME
+        {
+            UNKNOWN             = 0x0
+            OTHER_NAME          = 0x1
+            RFC822_NAME         = 0x2
+            DNS_NAME            = 0x3
+            X400_ADDRESS        = 0x4
+            DIRECTORY_NAME      = 0x5
+            EDI_PARTY_NAME      = 0x6
+            URL                 = 0x7
+            IP_ADDRESS          = 0x8
+            REGISTERED_ID       = 0x9
+            GUID                = 0x10
+            USER_PRINCIPLE_NAME = 0x11
         }
 
         ############
@@ -107,119 +166,178 @@ function Set-CAExtension
                 throw "Can't find certificate authority config string, please use -CAConfig parameter."
             }
         }
+
+        #######################
+        # Get ParameterSetName
+        #######################
+
+        $ParameterSetName = $PsCmdlet.ParameterSetName
     }
 
     Process
     {
-        $Extensions = @()
-
-        ####################
-        # Basic Constraints
-        # 2.5.29.19
-        ####################
-
-        if ($SubjectType -or $PathLength)
+        if ($ParameterSetName -eq 'Set')
         {
-            $IsCA = $false
+            $Extensions = @()
 
-            if ($SubjectType -eq 'CA')
+            ############
+            # Key usage
+            # 2.5.29.15
+            ############
+
+            if ($KeyUsage -and $KeyUsage.Count -gt 0)
             {
-                $IsCA = $true
+                foreach ($Flag in $KeyUsage)
+                {
+                    $KeyUsageFlags += [KEY_USAGE]::$Flag
+                }
+
+                # Create extension object
+                $X509Ext = New-Object -ComObject X509Enrollment.CX509ExtensionKeyUsage
+
+                # Initialize
+                # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ix509extensionkeyusage-initializeencode
+                $X509Ext.InitializeEncode($KeyUsageFlags)
+
+                # Add to extensions
+                $Extensions +=
+                (@{
+                    'strExtensionName' = '2.5.29.15'
+                    'Type' = [PROPTYPE]::BINARY
+                    'Flags' = [POLICY]::CRITICAL
+                    'pvarValue' = (
+                        ConvertTo-DERstring -Bytes (
+                            [Convert]::FromBase64String($X509Ext.RawData(1))
+                        )
+                    )
+                })
             }
 
-            if (-not $PathLength)
+            ############################
+            # Subject Alternative Names
+            # 2.5.29.17
+            ############################
+
+            if ($SubjectAlternativeNames -and $SubjectAlternativeNames.Count -gt 0)
             {
-                $PathLength = -1
+                # Create extension object
+                $X509Ext = New-Object -ComObject X509Enrollment.CX509ExtensionAlternativeNames
+
+                # Create alternative name collection
+                $AlternativeNames = New-Object -ComObject X509Enrollment.CAlternativeNames
+
+                foreach ($Pair in $SubjectAlternativeNames.GetEnumerator()) {
+
+                    # Create alternative name
+                    $AlternativeName = New-Object -ComObject X509Enrollment.CAlternativeName
+
+                    try
+                    {
+                        # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ialternativename-initializefromstring
+                        $AlternativeName.InitializeFromString([ALT_NAME]::$($Pair.Name), $Pair.Value)
+                    }
+                    catch [Exception]
+                    {
+                        throw $_
+                    }
+
+                    # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ialternativenames-add
+                    $AlternativeNames.Add($AlternativeName)
+                }
+
+                # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ix509extensionalternativenames-initializeencode
+                $X509Ext.InitializeEncode($AlternativeNames)
+
+                # Add to extensions
+                $Extensions +=
+                (@{
+                    'strExtensionName' = '2.5.29.17'
+                    'Type' = [PROPTYPE]::BINARY
+                    'Flags' = [POLICY]::NON_CRITICAL
+                    'pvarValue' = (
+                        ConvertTo-DERstring -Bytes (
+                            [Convert]::FromBase64String($X509Ext.RawData(1))
+                        )
+                    )
+                })
             }
 
-            # Create new object
-            $X509Ext = New-Object -ComObject X509Enrollment.CX509ExtensionBasicConstraints
+            ####################
+            # Basic Constraints
+            # 2.5.29.19
+            ####################
 
-            # Initialize
-            # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ix509extensionbasicconstraints-initializeencode
-            # Debug:
-            # [Convert]::FromBase64String($X509Ext.RawData(1))
-            $X509Ext.InitializeEncode($IsCA, $PathLength)
+            if ($SubjectType -or $PathLength)
+            {
+                $IsCA = $false
 
-            # Add to extensions
-            $Extensions +=
-            (@{
-                'strExtensionName' = '2.5.29.19'
-                'Type' = [PROPTYPE]::BINARY
-                'Flags' = [EXTENSION]::CRITICAL_FLAG
-                'pvarValue' = (ConvertTo-DERstring -Bytes ([Convert]::FromBase64String($X509Ext.RawData(1))))
-            })
+                if ($SubjectType -eq 'CA')
+                {
+                    $IsCA = $true
+                }
+
+                if (-not $PathLength)
+                {
+                    $PathLength = -1
+                }
+
+                # Create new object
+                $X509Ext = New-Object -ComObject X509Enrollment.CX509ExtensionBasicConstraints
+
+                # Initialize
+                # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ix509extensionbasicconstraints-initializeencode
+                $X509Ext.InitializeEncode($IsCA, $PathLength)
+
+                # Add to extensions
+                $Extensions +=
+                (@{
+                    'strExtensionName' = '2.5.29.19'
+                    'Type' = [PROPTYPE]::BINARY
+                    'Flags' = [POLICY]::CRITICAL
+                    'pvarValue' = (
+                        ConvertTo-DERstring -Bytes (
+                            [Convert]::FromBase64String($X509Ext.RawData(1))
+                        )
+                    )
+                })
+            }
+
+            ######
+            # Set
+            ######
+
+            if ($Extensions.Count -gt 0)
+            {
+                $CaAdmin = New-Object -ComObject CertificateAuthority.Admin
+
+                # Itterate extensions
+                foreach($Ext in $Extensions)
+                {
+                    # https://docs.microsoft.com/en-us/windows/win32/api/certadm/nf-certadm-icertadmin-setcertificateextension
+                    $CaAdmin.SetCertificateExtension(
+                        $Config,
+                        $RequestID,
+                        $Ext['strExtensionName'],
+                        $Ext['Type'],
+                        $Ext['Flags'],
+                        $Ext['pvarValue']
+                    )
+                }
+            }
         }
-
-        ############
-        # Key usage
-        # 2.5.29.15
-        ############
-
-        if ($KeyUsage -and $KeyUsage.Count -gt 0)
+        elseif ($GetKeyUsage.IsPresent)
         {
-            #######
-            # Enum
-            #######
-
-            # https://msdn.microsoft.com/en-us/library/windows/desktop/aa379410.aspx
-            enum KEY_USAGE
-            {
-                NO                 = 0
-                DIGITAL_SIGNATURE  = 0x80
-                NON_REPUDIATION    = 0x40
-                KEY_ENCIPHERMENT   = 0x20
-                DATA_ENCIPHERMENT  = 0x10
-                KEY_AGREEMENT      = 0x8
-                KEY_CERT_SIGN      = 0x4
-                OFFLINE_CRL_SIGN   = 0x2
-                CRL_SIGN           = 0x2
-                ENCIPHER_ONLY      = 0x1
-                DECIPHER_ONLY      = 0x8000
-            }
-
-            foreach ($Flag in $KeyUsage)
-            {
-                $KeyUsageFlags += [KEY_USAGE]::$Flag
-            }
-
-            # Create new objecta
-            $X509Ext = New-Object -ComObject X509Enrollment.CX509ExtensionKeyUsage
-
-            # Initialize
-            # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ix509extensionkeyusage-initializeencode
-            $X509Ext.InitializeEncode($KeyUsageFlags)
-
-            # Add to extensions
-            $Extensions +=
-            (@{
-                'strExtensionName' = '2.5.29.15'
-                'Type' = [PROPTYPE]::BINARY
-                'Flags' = [EXTENSION]::CRITICAL_FLAG
-                'pvarValue' = (ConvertTo-DERstring -Bytes ([Convert]::FromBase64String($X509Ext.RawData(1))))
-            })
+            Write-Output -InputObject ([KEY_USAGE])
         }
-
-        ######
-        # Set
-        ######
-
-        if ($Extensions.Count -gt 0)
+        elseif ($GetAltName.IsPresent)
         {
-            $CaAdmin = New-Object -ComObject CertificateAuthority.Admin
-
-            # Itterate extensions
-            foreach($Ext in $Extensions)
-            {
-                # https://docs.microsoft.com/en-us/windows/win32/api/certadm/nf-certadm-icertadmin-setcertificateextension
-                $CaAdmin.SetCertificateExtension($Config, $RequestID, $Ext['strExtensionName'], $Ext['Type'], $Ext['Flags'], $Ext['pvarValue'])
-            }
+            Write-Output -InputObject ([ALT_NAME])
         }
     }
 
     End
     {
-        Remove-Variable -Name CaAdmin, X509* -ErrorAction SilentlyContinue
+        Remove-Variable -Name CaAdmin, X509*, AlternativeName* -ErrorAction SilentlyContinue
     }
 }
 
@@ -227,8 +345,8 @@ function Set-CAExtension
 # SIG # Begin signature block
 # MIIY9AYJKoZIhvcNAQcCoIIY5TCCGOECAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU6q8dTODSxeVPchemB1o8nh8g
-# 7LGgghJ3MIIE9zCCAt+gAwIBAgIQJoAlxDS3d7xJEXeERSQIkTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUzjOv7M+0/Mw/3s0igA456ArU
+# lv2gghJ3MIIE9zCCAt+gAwIBAgIQJoAlxDS3d7xJEXeERSQIkTANBgkqhkiG9w0B
 # AQsFADAOMQwwCgYDVQQDDANiY2wwHhcNMjAwNDI5MTAxNzQyWhcNMjIwNDI5MTAy
 # NzQyWjAOMQwwCgYDVQQDDANiY2wwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIK
 # AoICAQCu0nvdXjc0a+1YJecl8W1I5ev5e9658C2wjHxS0EYdYv96MSRqzR10cY88
@@ -329,34 +447,34 @@ function Set-CAExtension
 # RxdbbxPaahBuH0m3RFu0CAqHWlkEdhGhp3cCExwxggXnMIIF4wIBATAiMA4xDDAK
 # BgNVBAMMA2JjbAIQJoAlxDS3d7xJEXeERSQIkTAJBgUrDgMCGgUAoHgwGAYKKwYB
 # BAGCNwIBDDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAc
-# BgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQU7o2Q
-# d8cTkse2iRJ6/jhYXB8HHUswDQYJKoZIhvcNAQEBBQAEggIAon0ix+Em0HLwYOP4
-# yrOSJXSjlppZg6hfQFyBOUz98dwe9+CyHkQmx+YwFycIEFS21vEcRI5dXT1S2JQ7
-# HP2VL9iLW3g+lnZKFNfE7LagU6p3avxcEiG/75BxfSVoHu3+Np7NuhGDIfyAgv47
-# D7ebxYaGRupS83TCnDfTd71zCeLsUBKFD61KUwCeNhkaQKioiU3kHHxMmJpTgdZi
-# pXfU91xgEN7Ul1J/vl+lfZ2BcKew3duSuPrt222fY9zVtPtIZ0jSjKcSR9kq8bHX
-# nuAzVb8JJne24cJJiTard1T8MtYgHJPobIhRbM1ArjQncHz8DAtpWv9ry2yDeYBL
-# gs+IGEFTyn3CvkQGtrDVOCaN+I1nLleuOA6+WLaTSove4g/AbW9ukmAq4+TXEzI5
-# Ih4YN702gbWJ6K/C0qu9zRFYApZOOWYP5M5PbDRqiFrx3wBr5LJ7cRqq2Sofw/+O
-# WwBPKoAiT1/8YpdxvfIeceM9ERr7rbSzOPKROHcTv8/tD++I+X5WGCe40UfUB1ss
-# OqO17yRh0r3JwG0tEIuIfAUG3KdCFGzgTnmw+mEy0Bx1UhWazgYAZK2PY2wdT+8C
-# xNBO1xjjqFr69sL44YnAcs3y89TS7QMgggSFldmI7Z68T+XkgdQx+mc4NV83e/Zu
-# Zal0RYLa/epaaxYH7u861Pk5s4yhggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkC
+# BgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUoaSD
+# 5deaJhUrvRUojxWjEk4bcDMwDQYJKoZIhvcNAQEBBQAEggIAq38l3sReesA2RMCv
+# vx5ZHuHUmj9+P8KK2gRcJmaaucKCg/hP1go2YGKcWM53a4nnScVbYT3JLYIxOKvS
+# 0B+BDZ5z8m6Dey0Ea4D7JVTf616xZPm5Fj+zIZNn2niqLtP4xenTkbk55VENFiFX
+# MKa997DLpFm3fzTHUznIkYlcyg02O/UCn8E5fitJR+Q3j2VclhhBpiVePHphiITq
+# mn9xFSxGcqs1GWdHLA8CBMlmU3cpI3Tl0/2Drf8mMr7LkU1vC3bXuGquw9pU7CBH
+# AdGg28dUCI/BxD0FoiKhQRdu60I8OsXy43/SnNoFEoYLYhxmJYB/zn0FvTGyEbqB
+# 0Pg2BjcZJbqZW/rdX1JJpldkBy2vRwkwxTogO+J2hvjGjzIeFxfyh6vE1v0Zdhb3
+# z20xVhucsIqH6b0633Hvbgja1AxJ0VNDgZaWK/2RGMeWQ7jhap5555E+fbSv1LjU
+# RbGSBvHMpLdDCzFIPrngKTOOHJJ2us9Lr3nEHHXw4OBJBNp3O/r/z2qC/f9neqx6
+# mDCYtlJYdLN7JZ2T/RwkSlSfmkLEM17WNopkyEFAZetUhlAMlkZ/Dar3A/G2qpvK
+# gCiLypwo7408qRTULGZmHOOAVGbHsYU+l5PuvySzPDvUrSJ8HtakbQUhoDZkf6xC
+# 5AOu05g9hIIAntQc8Zb37uc864+hggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkC
 # AQEwdzBjMQswCQYDVQQGEwJVUzEXMBUGA1UEChMORGlnaUNlcnQsIEluYy4xOzA5
 # BgNVBAMTMkRpZ2lDZXJ0IFRydXN0ZWQgRzQgUlNBNDA5NiBTSEEyNTYgVGltZVN0
 # YW1waW5nIENBAhAKekqInsmZQpAGYzhNhpedMA0GCWCGSAFlAwQCAQUAoGkwGAYJ
-# KoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNDI1MTM0
-# OTEyWjAvBgkqhkiG9w0BCQQxIgQgnsrbDnpa2uVBVrGChlxpOTS23bgfIbwf0fnC
-# 7ko2+kwwDQYJKoZIhvcNAQEBBQAEggIAKSTaQGhuq/M9YSsuhvHAd/8g+m5ypqcL
-# IQgyEbciOMbm/d/3FTP8LaEWrNw4hv1E/YLzZAQo2gDUa0TrKdbDfMXhiVL2sjiC
-# 8Ibe3aBSPyV03nPXw0OZG3A1V9iOTIsNshkXecii3BVBSantTh0tDCaO0QPvRYMU
-# 6bWTD9WrWpQHjtrzcNHdqQAe7GC40b2Y6+pN0FKgwlEa9kzNw7r7UJinjxrUDOOr
-# 1L5dUdsHfmiFU/c8FtKHvaZ3oZGzWfJLu/3rbcCS1V5O6XS4xgkZhBnRYzrQkzQQ
-# +P+iIELodNV9vgCKAQOW6TlO8T1Wee5g/0niS5xi5JBJZ9CzJTHcd/22BHwBUOLY
-# K1sx5m7O1HroZ1kQnWTVYnv2csbo86NHXgAXeIOZ3IIM24hOdcutXi4DwtHtIovQ
-# 6poJEjBp/wgQKOR8rjAgWho1fceQinKcHYbI92zyPuHjVddZYAGRgqNH9carvqTU
-# Z6qmjP4M85VDdRpILdxuvIW1/uE0R8ocDy756CFUEqU6SuXw0GchKSRlW88XIDCl
-# txhLnOYsWNdOzherYyy15tlQejZU8o9oqL5DNa9sbw+gwa2tfcTV78pgoXSaA3HM
-# nBX3d/5xTD0i9wzAYZxqmuMUGcz4BNG1g7OtqD1t0Pje8nB66YZcMcDeJRYsUTu9
-# y+A3SfwIh3Q=
+# KoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNDI1MTUz
+# ODA5WjAvBgkqhkiG9w0BCQQxIgQg7d71TuCHu1KkABrSbnAR8liW1yi/wTUwMKkV
+# rI7/L4gwDQYJKoZIhvcNAQEBBQAEggIAkbTUSAb4Is4ZSqdGu9JWMLupaAmiffiS
+# rXouEXT8DdWhp3iSxvtJFzgIO6QvTyVx4adElgulWoTMlxcdBUV6QJoUT3r7NX+h
+# +IhQ/jdvnI+FokDQ0xoXJ6K9cfJ2Zkdd/bjmEr+PDiYPxuGF1OwFdwQwJRq0buxB
+# 6lDBeoK9xoNtEVxQb9KCKSiu9MtRHkKKH0qAVqaMfJHY16yYZVWBqtIk5v6IKez2
+# AhmTN53yvPDIOA8Rn3aWCrMdff9c0+m72hTKrXpML7dgY0E84tD9Ulp1+WqQ6hfm
+# //u3MTezs/ld3YmUbvFJEFentnN2ManoquMx7dp3WgSrZ0zdM/xmDLMBEcdqu7Jc
+# h/MwegV9kRtZ0zV2yuK7InbGjh2b15qEAZ+KfuZ87r9WUH7s90Ae7L990T+Deys+
+# EFWjlOZ8EHrK1ayuDylg1LecYMQg/iscSWYgXsm4Tt7rPygeK8O+KpAq95DQPQ5b
+# Y/YxoASjSEoDVGpdb3UEjpyrDhvwY6/RkphaKeJXCwWegsM51W/sSZr2pvc4qshe
+# gEk63R/6qkVvIlJG4WYft7wGTdW+hzM4H9qbxXT3MIWCDd1PCfeRLbUNB9YTU2sc
+# iB+tVewewyy9LTm0S3gPExqM1SBCsidrjAopEZhgeGET83cDlRNWJUmZ6vuu1VdQ
+# wjLW5cxFttU=
 # SIG # End signature block
