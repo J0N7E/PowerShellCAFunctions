@@ -135,15 +135,6 @@ function Get-CAView
             LOG_REVOKED   = -7
         }
 
-        enum CVR_SEEK
-        {
-            EQ = 0x1
-            LE = 0x2
-            LT = 0x4
-            GE = 0x8
-            GT = 0x10
-        }
-
         # https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-wcce/8116912a-59e6-4849-83dd-77b39b6370e0
         enum PROPTYPE
         {
@@ -153,12 +144,21 @@ function Get-CAView
             STRING   = 0x4
         }
 
-        enum Table
+        enum CVR_SEEK
         {
-            Request   = 0x0
-            Extension = 0x3
-            Attribute = 0x4
-            Crl       = 0x5
+            EQ = 0x1
+            LE = 0x2
+            LT = 0x4
+            GE = 0x8
+            GT = 0x10
+        }
+
+        enum CVRC_TABLE
+        {
+            REQUESTS   = 0X0
+            EXTENSIONS = 0X3
+            ATTRIBUTES = 0X4
+            CRL        = 0X5
         }
 
         enum Disposition
@@ -241,7 +241,7 @@ function Get-CAView
             {
                 'Request'
                 {
-                    $CaView.SetTable([Table]::Request)
+                    $CaView.SetTable([CVRC_TABLE]::REQUESTS)
 
                     ###################
                     # Set restrictions
@@ -356,7 +356,7 @@ function Get-CAView
 
                 'Extension'
                 {
-                    $CaView.SetTable([Table]::Extension)
+                    $CaView.SetTable([CVRC_TABLE]::EXTENSIONS)
 
                     if ($Name)
                     {
@@ -542,8 +542,8 @@ function Get-CAView
 # SIG # Begin signature block
 # MIIY9AYJKoZIhvcNAQcCoIIY5TCCGOECAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUypn4RKnH+/blrvAvShG4G7RY
-# cYSgghJ3MIIE9zCCAt+gAwIBAgIQJoAlxDS3d7xJEXeERSQIkTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUlDcH1Cg/BTSPsY2YVQjlT2nE
+# LfmgghJ3MIIE9zCCAt+gAwIBAgIQJoAlxDS3d7xJEXeERSQIkTANBgkqhkiG9w0B
 # AQsFADAOMQwwCgYDVQQDDANiY2wwHhcNMjAwNDI5MTAxNzQyWhcNMjIwNDI5MTAy
 # NzQyWjAOMQwwCgYDVQQDDANiY2wwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIK
 # AoICAQCu0nvdXjc0a+1YJecl8W1I5ev5e9658C2wjHxS0EYdYv96MSRqzR10cY88
@@ -644,34 +644,34 @@ function Get-CAView
 # RxdbbxPaahBuH0m3RFu0CAqHWlkEdhGhp3cCExwxggXnMIIF4wIBATAiMA4xDDAK
 # BgNVBAMMA2JjbAIQJoAlxDS3d7xJEXeERSQIkTAJBgUrDgMCGgUAoHgwGAYKKwYB
 # BAGCNwIBDDEKMAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAc
-# BgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUmfLV
-# 4PrQxoWJ2D544hqSq6JC0vUwDQYJKoZIhvcNAQEBBQAEggIAWipwG9gNaeEZDKUE
-# OPy0NDKGKLAGF8VAnuvslsPohZHEy6oNBCtzWj816R6QGPW27nK50L2Vh3p4XHHY
-# p68fvZps+ztxfGIUHihS1CmeNDg2EU7YJi4z76TXGGz6dX7/9ZUtWkiG4C4s5N8O
-# 6r5E+hP0hthTv18ipeZOS+yL0FEx9buM6kH7Sqac7B3jTEKbVyxv2MHAXXEx0wZ2
-# g8Z6K1PGJwcx45qf0xPMzlzjmBlmphlOQiUP/3TI+7CxeUYZcirXAgmv4ubpmzcA
-# ZBUaIgpeV2pLTZWmbEN7KrViTjDyWVxCW2elciFOt8dq8LtHBBQiU1TUgAwa3V82
-# pirOLtu4850n1+uYZ48/zD5hEg8zGdV//1JLNQKWAQAWnhpwcNh1d6V37nWVtvS9
-# 3E+jcJ5mhoSMvVt4ZpDqcvDtCTuXe2g0aL13V0pU1NZTFOkZvuZ2Uv6il18Q6jhi
-# x+/4J0qw3ONBhJgFwBXGJu3FovYwWEJqa7L2VrqpLH8E5TDBEM6fnhKBFO5FcApT
-# NUxmDLmoih2NkWhiJ4vFgXKb9v0p0drgi9lY9NJ6vQ0zsm4j9UnI5z87vv4LYe3+
-# mgA2hdxouKmBDDJ+baNN1I2zxCXoG1cUA9gdCNsTt5QJ4B9vjWwmMbscv2EFgaCq
-# K3eQzKuwWri2+5aKvXy5wZoLhGKhggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkC
+# BgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUq+j9
+# nc02rQxFo6+CGcPXZHlSq1swDQYJKoZIhvcNAQEBBQAEggIAnmR+xW+IjiRDqpno
+# Vs1en+8yWL68dxUyaKwshBYWp9DioMbp2AaafiIImwhv8xXdhQxLtwroQjqyl7S8
+# 3lPNd7eyRtZrmykCiKPdRz/2c92TRsdXv/j1Izrix9pdViyRZMil9aLYPYTZa966
+# CGyLYVUBOqLYZSHF1fQBWF5ncav1L0942yABcezjk+YsENwSNA06NvHLDoh5J58t
+# wXawUrxM/tNoycEpdnKLuaBj2+K/+SToxuZSADHKKNDvXzH88JCMKb4NgSYFGJFO
+# McqL1wAIcOJcJWEGG6mBUYfLpcp7p2zXeqClSYQU3w1IjC5HY1ejllmKeoMtsjHw
+# PeXLX6Gzz/S1WMC5jx3rwu27rcpGOCUElyEZ6WLxkL5lWrVnzB2sshWLTXwGX8SU
+# k+yOHTOEsb9Qytf8OjJmgL96IaspKPjglOdGsLrAKFigv/iZU6+MhA91TKH1Oieg
+# gRCEvWvzWFS2hU20KZ6Tfs7Lh5HwTpIPssQCmjyfh/5d2Cj+yqM0UDs6mm69tSI9
+# t/cUuQ8MDDYfWYhEE6Vnj0fyrLSaI0t4fwkirALSsWc37Q1j7TuRMt/xpMhiXc3n
+# r2IMY4LqeDn21bTwH+hk2x6Igdvn6/zLr83zc+d6whJOc8hLQxZzsBc47Ek7UtQ7
+# kTXrZEsYjKtzk+/m/7RIcyFR516hggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkC
 # AQEwdzBjMQswCQYDVQQGEwJVUzEXMBUGA1UEChMORGlnaUNlcnQsIEluYy4xOzA5
 # BgNVBAMTMkRpZ2lDZXJ0IFRydXN0ZWQgRzQgUlNBNDA5NiBTSEEyNTYgVGltZVN0
 # YW1waW5nIENBAhAKekqInsmZQpAGYzhNhpedMA0GCWCGSAFlAwQCAQUAoGkwGAYJ
-# KoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNDI2MTEw
-# MDA1WjAvBgkqhkiG9w0BCQQxIgQgm36zYzmnmR0fn0JYClSLfzwJP+6CNVsVx8WB
-# My1vpQcwDQYJKoZIhvcNAQEBBQAEggIAiTZObyBtgcna0JYTtfihNo4ffAZTCeKU
-# pCxlMbhBJ6w4xDjW9DKmxPFegMJ8275J40DkCH7YMd6k7/ygi7A89gAh4BBOHU5/
-# ko3iDCxZ/RfwqaSmycHR3w8IBL7Tu3N0Chy660ynyCKs92PUGkx6TeMA98VoeqlF
-# R1IbRuZEqa7hAlki6f2bhYqIHbjyMYPXDegUpIv5hMwtxV/dlpL7zJKQpJZ8BDPG
-# JhMgO9L8JB9jygw05B3BFTl3G6g9zc8x3dUp4V0KR1RccLJUSrhQK0RGCJ9x14my
-# 6G6le0vDc5XQcDHjSTXhEptNpHxo+9tiEO4HLL/fGhFlHN0pCaUowWDu0G6o2bNc
-# AJlMsaFFYfVJy8P7FgsP210CBcR/76Qftx+JOw+sQwPpwYl8ZssymsASvQJ3Hl67
-# hSlORv0l43z6q7I+Va2wQShrxgB1ABmDwQEogH34ARDjPdfBtP5AGi2AzLRv3Ch0
-# 2ka3vs4mVkmwDRfXza1gpGcsUXmFYEgmim/9TuHeotnXW0+gqhJe4Ui10TD+sp1q
-# jjqHnFGBE6asCETmM/b/Jncs0JrTfBIFalbl5f10PAxnIwwn/nImennX8sbgVyYv
-# FhX1GoH3pfD02JfYLxhHP/9G8v7v5lPaE+pR3qGQgruYD0p8Gb7jQnezEPmMzC7L
-# iqrD2NgcM2M=
+# KoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNDI3MTQw
+# MDA0WjAvBgkqhkiG9w0BCQQxIgQgg1ZvC/e+6TuYMqXwxCb9BvKwLHdBrSMrGtWC
+# 85ipQ4MwDQYJKoZIhvcNAQEBBQAEggIAnRX0yfPC7p4LE7jiYmK9W5Zm/QZY60jl
+# utrvPpOmYOzTX6KiCFeakx0KRIBZFu2948jo5+VE5yWqN7zRJg6veneTbZiD1hBl
+# 2HZzCxiSJG23Y2hBMUW1Grvt/1FVTkwm+rE2cujjkyeYWJDtBoyKzBUs9BbSsMmG
+# phaJMNgn44hOOX5ZaTirEA8lTlpld83aJd/dPBPU7BnFdeHkThE2wbuTmR5JZN4k
+# 2vFsSfIab7nwC5HOJm/sc76XuZw+W7FuRDmDpNm3XInb4d5AdOmWh/pMcXb4WjD/
+# 1rmZzQ9aYCXx1IhHBSSEjL5ziBrGIRj84UCPCf88jOnNNq5B/wS0QW2EGNKN7AgU
+# KiDGjCe3LHtNJ0c2/JPSIhkW10nUZtc9BP9YYOiYIj1cA583lUAtA+OKbaz9EmzB
+# 7JwEkQTXi3NGklmCobak1B+T1/U8BxVywLOBEXMX/dCKA4bWNmD6F3wuXW9HcRf+
+# +BjpJ/YQ65Ho/m4lSoyDNVU3yPmD2dhstspnsP6XLijRULQ0/okprpR/uG1dR8x9
+# b5Me0B+Qu++dgvRrzZNiEUrtKJin88bh604xtFXFxgmsEyYvOwjl6pTY93+Qx5w3
+# WY9lwCyZdQbQegdJvKJWru0fROTYaPuyjIGeDfEC4Fi0gqwMkVWdbX1X305ptiQK
+# JTOGV0dSeH4=
 # SIG # End signature block
