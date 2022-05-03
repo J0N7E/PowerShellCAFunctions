@@ -40,25 +40,25 @@ function Get-CAView
 
     Param
     (
-        [Parameter(ParameterSetName='Request', Mandatory=$true)]
-        [Parameter(ParameterSetName='Request_Schema', Mandatory=$true)]
-        [Switch]$Request,
+        [Parameter(ParameterSetName='Requests', Mandatory=$true)]
+        [Parameter(ParameterSetName='Requests_Schema', Mandatory=$true)]
+        [Switch]$Requests,
 
-        [Parameter(ParameterSetName='Request')]
+        [Parameter(ParameterSetName='Requests')]
         [ValidateSet('Issued', 'Pending', 'Failed', 'Revoked')]
         [String]$Status,
 
-        [Parameter(ParameterSetName='Request')]
+        [Parameter(ParameterSetName='Requests')]
         [String]$Template,
 
-        [Parameter(ParameterSetName='Extension', Mandatory=$true)]
-        [Parameter(ParameterSetName='Extension_Schema', Mandatory=$true)]
-        [Switch]$Extension,
+        [Parameter(ParameterSetName='Extensions', Mandatory=$true)]
+        [Parameter(ParameterSetName='Extensions_Schema', Mandatory=$true)]
+        [Switch]$Extensions,
 
-        [Parameter(ParameterSetName='Extension')]
+        [Parameter(ParameterSetName='Extensions')]
         [ArgumentCompleter({
 
-            $Extensions =
+            $ExtensionTable =
             @{
                 "'SMIME Capabilities'"                = '1.2.840.113549.1.9.15'
                 "'Certificate Type'"                  = '1.3.6.1.4.1.311.20.2'
@@ -79,36 +79,36 @@ function Get-CAView
 
             if ($args[4].GetHashtable)
             {
-                $Extensions
+                $ExtensionTable
             }
             else
             {
-                $Extensions.Keys
+                $ExtensionTable.Keys
             }
         })]
         [String]$Name,
 
-        [Parameter(ParameterSetName='Request')]
-        [Parameter(ParameterSetName='Extension')]
+        [Parameter(ParameterSetName='Requests')]
+        [Parameter(ParameterSetName='Extensions')]
         [String]$RequestId,
 
-        [Parameter(ParameterSetName='Attribute', Mandatory=$true)]
-        [Parameter(ParameterSetName='Attribute_Schema', Mandatory=$true)]
-        [Switch]$Attribute,
+        [Parameter(ParameterSetName='Attributes', Mandatory=$true)]
+        [Parameter(ParameterSetName='Attributes_Schema', Mandatory=$true)]
+        [Switch]$Attributes,
 
         [Parameter(ParameterSetName='Crl', Mandatory=$true)]
         [Parameter(ParameterSetName='Crl_Schema', Mandatory=$true)]
         [Switch]$Crl,
 
-        [Parameter(ParameterSetName='Request')]
-        [Parameter(ParameterSetName='Extension')]
-        [Parameter(ParameterSetName='Attribute')]
+        [Parameter(ParameterSetName='Requests')]
+        [Parameter(ParameterSetName='Extensions')]
+        [Parameter(ParameterSetName='Attributes')]
         [Parameter(ParameterSetName='Crl')]
         [Array]$Properties,
 
-        [Parameter(ParameterSetName='Request_Schema', Mandatory=$true)]
-        [Parameter(ParameterSetName='Extension_Schema', Mandatory=$true)]
-        [Parameter(ParameterSetName='Attribute_Schema', Mandatory=$true)]
+        [Parameter(ParameterSetName='Requests_Schema', Mandatory=$true)]
+        [Parameter(ParameterSetName='Extensions_Schema', Mandatory=$true)]
+        [Parameter(ParameterSetName='Attributes_Schema', Mandatory=$true)]
         [Parameter(ParameterSetName='Crl_Schema', Mandatory=$true)]
         [Switch]$GetSchema,
 
@@ -132,15 +132,6 @@ function Get-CAView
             UIPICKSKIPLOCALCA = 0x5
         }
 
-        # https://docs.microsoft.com/en-us/windows/win32/api/certview/nf-certview-icertview-setrestriction
-        enum CV_COLUMN
-        {
-            QUEUE         = -1 # Pending
-            LOG_DEFAULT   = -2 # Issued, failed & revoked
-            LOG_FAILED    = -3
-            LOG_REVOKED   = -7
-        }
-
         # https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-wcce/8116912a-59e6-4849-83dd-77b39b6370e0
         enum PROPTYPE
         {
@@ -150,6 +141,16 @@ function Get-CAView
             STRING   = 0x4
         }
 
+        # https://docs.microsoft.com/en-us/windows/win32/api/certview/nf-certview-icertview2-settable
+        enum CVRC_TABLE
+        {
+            REQUESTS   = 0x0
+            EXTENSIONS = 0x3000
+            ATTRIBUTES = 0x4000
+            CRL        = 0x5000
+        }
+
+        # https://docs.microsoft.com/en-us/windows/win32/api/certview/nf-certview-icertview-setrestriction
         enum CVR_SEEK
         {
             EQ = 0x1
@@ -159,14 +160,14 @@ function Get-CAView
             GT = 0x10
         }
 
-        enum CVRC_TABLE
+        # https://docs.microsoft.com/en-us/windows/win32/api/certview/nf-certview-icertview-setrestriction
+        enum CV_COLUMN
         {
-            REQUESTS   = 0X0
-            EXTENSIONS = 0X3
-            ATTRIBUTES = 0X4
-            CRL        = 0X5
+            QUEUE         = -1 # Pending
+            LOG_DEFAULT   = -2 # Issued, failed & revoked
+            LOG_FAILED    = -3
+            LOG_REVOKED   = -7
         }
-
         enum Disposition
         {
             Active             = 8
@@ -205,17 +206,17 @@ function Get-CAView
         # Set table
         ############
 
-        if ($Request.IsPresent)
+        if ($Requests.IsPresent)
         {
-            $Table = 'Request'
+            $Table = 'Requests'
         }
-        elseif ($Extension.IsPresent)
+        elseif ($Extensions.IsPresent)
         {
-            $Table = 'Extension'
+            $Table = 'Extensions'
         }
-        elseif ($Attribute.IsPresent)
+        elseif ($Attributes.IsPresent)
         {
-            $Table = 'Attribute'
+            $Table = 'Attributes'
         }
         elseif ($Crl.IsPresent)
         {
@@ -227,8 +228,8 @@ function Get-CAView
         #############
 
         # Get extensions from argumentcompleter scriptblock
-        $Extensions = Invoke-Command -ScriptBlock $MyInvocation.MyCommand.Parameters.Item("Name").Attributes.ScriptBlock `
-                                     -ArgumentList @($null, $null, $null, $null, @{ GetHashTable = $True })
+        $ExtensionTable = Invoke-Command -ScriptBlock $MyInvocation.MyCommand.Parameters.Item("Name").Attributes.ScriptBlock `
+                                         -ArgumentList @($null, $null, $null, $null, @{ GetHashTable = $True })
 
         ###################
         # Get local config
@@ -267,7 +268,7 @@ function Get-CAView
         {
             switch ($Table)
             {
-                'Request'
+                'Requests'
                 {
                     $CaView.SetTable([CVRC_TABLE]::REQUESTS)
 
@@ -382,7 +383,7 @@ function Get-CAView
                     }
                 }
 
-                'Extension'
+                'Extensions'
                 {
                     $CaView.SetTable([CVRC_TABLE]::EXTENSIONS)
 
@@ -392,7 +393,7 @@ function Get-CAView
                             $CaView.GetColumnIndex(0,"ExtensionName"),
                             [CVR_SEEK]::EQ,
                             0,
-                            $Extensions["'$Name'"]
+                            $ExtensionTable["'$Name'"]
                         )
                     }
 
@@ -415,7 +416,7 @@ function Get-CAView
                     )
                 }
 
-                'Attribute'
+                'Attributes'
                 {
                     if (-not $GetSchema.IsPresent)
                     {
@@ -541,7 +542,7 @@ function Get-CAView
                                 Add-Member -InputObject $Output `
                                            -MemberType NoteProperty `
                                            -Name 'ExtensionReadableName' `
-                                           -Value (($Extensions.Keys | Where-Object { $Extensions[$_] -eq $CValue }) -replace "'", '') `
+                                           -Value (($ExtensionTable.Keys | Where-Object { $ExtensionTable[$_] -eq $CValue }) -replace "'", '') `
                                            -Force
                             }
 
@@ -576,8 +577,8 @@ function Get-CAView
 # SIG # Begin signature block
 # MIIZBgYJKoZIhvcNAQcCoIIY9zCCGPMCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUwgNxxGqD2xnzfpoXn01vrWHd
-# WwKgghKHMIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUHaTdJ+Rd6uYNrsGDaLvE+rMr
+# 7DygghKHMIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMTA2MDcxMjUwMzZaFw0yMzA2MDcx
 # MzAwMzNaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEAzdFz3tD9N0VebymwxbB7s+YMLFKK9LlPcOyyFbAoRnYKVuF7Q6Zi
@@ -679,33 +680,33 @@ function Get-CAView
 # 6TCCBeUCAQEwJDAQMQ4wDAYDVQQDDAVKME43RQIQJTSMe3EEUZZAAWO1zNUfWTAJ
 # BgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEKMAigAoAAoQKAADAZBgkqhkiG9w0B
 # CQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAj
-# BgkqhkiG9w0BCQQxFgQUItIisFqI8ugfeK0iu4PGjwlVSoYwDQYJKoZIhvcNAQEB
-# BQAEggIAMEh/nAEtZcFOXSBvL7ZlCIOls/2aFaY454l9/dkPVxg314qNdAue/PRd
-# 4zo9LzzUV2ZLZwzBQCwJhZ64ZLAeImJDqLoScxnhwjPOUJzUzQQDZz2mTWhzsP8W
-# bN7s8j76EBfdZieAYzyWskZstZBy1cjLBMvBc5DxPWgTk9vcMyRNYf9o+Kdoz0LB
-# 78kcHl/0oQaXUsMTLGpVX7xcuu+ZNg28Kg5JySY5y4G/pZ+ArGggt/M1hdjK5xgO
-# VYCKoGk5qNtq06xaaTJJ/B1oBjM8vnU5f+J93fWYkkhNrJzHBuwZR/vO96/CGgW1
-# PubQh2ssqSyVNTqCmaF4hDqaawkMOGoKvUS9POuo1m3GuYeuDFRTqVso38nfm8nG
-# uO7hEhmQcGsdkuiHCuW6Pkd8tlgcJXHtQ22GhcNTbXNxqPtpAdLEuw0S7eW/dDKc
-# fOTfFMzr7kmHZ4HQuUM+4JsE9TI+cYsJ58fMSzrAgTEbAi3/zm8G+XewXsq50yFN
-# NCPUVp3Z1PDsSaowMslNyC9PVDJ/2Mg1PMzSvlnRB77QPxWrXJ40eqvOjqMu6hKd
-# Flkr43Q/resea4lghzH0iz9QkRbYX9C1tEigm4myHF2/RGB4ntI4jTo8YN1u1Wwe
-# rLKM9qoiZiUPrItd73kZw/eiD+3Kb6C3yfijY1RnTkisMxtFcTShggMgMIIDHAYJ
+# BgkqhkiG9w0BCQQxFgQUeuhwFPo+sb+AU6Ey5+PNkWFP2gowDQYJKoZIhvcNAQEB
+# BQAEggIAPtEnbEgXNGvEIxaIMv4KnQoxwSDF3itl1ev2qb4TPc+3ADXpxjzsk8oh
+# oHXUQcCYfD68DM6jwtmAwSFV0esEtw7uwuWNPJrAo3AYSS8aW7a3Bt0t08dzG+yL
+# cB6fBf81l6atWO7KL17XBbGOffAqVowb+IffoxtF1VN/RHp809S/7C5Sx3w4YRUp
+# QOs5e5amBvNC2eV2ka6+fipBl+K5jREjdScvC6lsSr+/mSs1TOFnUYQygwNEb6D3
+# O/NJFfYareT2+X4L09eTWOBi+tgZ+3D8AEvOkg40uEKf1143TW+Sld6hNUZN4GWS
+# W00u939OIQ8rHwgGXeJ9TMcFycqVAbwoJLayPouhRd2jPTYPhHSSTXBaejNvb315
+# Od2R6Sw485fmgfcTE65QO1JtLgmXehyl0qSMnNji5uR1ix6pZg7B13irFKvNVb/d
+# iaPaUv75kkP9XBgbgkXUhbvkRS99Vd5RFZ0BwC+FKQCzkNji52buSKIuGq2XvhdE
+# dgxhJhYuSK4YtHgjJ5TK+9xjaj1f7uxqTbfEP6RkhwXF3rsXrIw1NJaqpUk619PM
+# 7OA6bcdPZjxy1nZlfAk0ZTNRG3ocl3fAKNgIFMn8+Z+hIi6+iCNWu+eazfTU0LSU
+# k1PABhPZeGeuqP4rlps7SBYQNc8Askxosq3pM8DnfA+N5ID4yDuhggMgMIIDHAYJ
 # KoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQswCQYDVQQGEwJVUzEXMBUGA1UEChMO
 # RGlnaUNlcnQsIEluYy4xOzA5BgNVBAMTMkRpZ2lDZXJ0IFRydXN0ZWQgRzQgUlNB
 # NDA5NiBTSEEyNTYgVGltZVN0YW1waW5nIENBAhAKekqInsmZQpAGYzhNhpedMA0G
 # CWCGSAFlAwQCAQUAoGkwGAYJKoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG
-# 9w0BCQUxDxcNMjIwNTAyMTcwMDAzWjAvBgkqhkiG9w0BCQQxIgQgxWR7wFK/dIjC
-# tWWhetb7I3gRwA0tpJScHxSAqK3+HnUwDQYJKoZIhvcNAQEBBQAEggIAXGhfocza
-# ccBBaGQQ+ino45U5xcum4SAqQXYLUmQ70CcoChP/bMHiL03l6D9f4FQb5NFLOzi7
-# 9AX+TyfSmgHofbqUEcp47DkejxhEJndBh2Bi8l+FyusVriVN+l7IfAcVPnn5/swY
-# fpGvy7Gh5Ud7b6CeOXCxR2TmlG1XsT0Tnn2wMBAOqThKDHMc5Rz3DhXuNyiIZJ34
-# At5alHHwFlVlEhJJcNXp0lH0DbgHzSo/Gl4V+REdc6tdyzTIoWbvbe2JAqeXCB5F
-# VcoV5+VbEf0sCTx3R/vqsfDPfF0wHBVgwFhzEw7nn1k/fxrnnMMCSEhPASvVC4Xd
-# Xd26GxCMv7J/OGk9v6IyVdLmeIqai5abSftStnNs3OonAH6i3yH+uT+lsw35lUcK
-# 5bAU493A5VnoBF4wWpnvvsg3vHNMWEZeS6PyCdWA7dH+PmFwfu8vwY7LbjaClIYr
-# hyT4LkufX7vwOwgq7IK/NvF0V2dubr+WOcrseqjPz5JYqPPJxcb9OttJSXDS9PCp
-# VAsrPYvQ+izUNGsnJUG0jR77PLQgq6rJae8yQBven08sgE+aId8X5aDI37daTluo
-# RY7AQiDNnsUAf0BxHCjPSZ6eaxMMOdcri3YIl12y7op5BbrzWYP4uNrkREmQ8g4r
-# cPDflnPsj3F56VLaJMmQdWXCcYc0DDRLDcM=
+# 9w0BCQUxDxcNMjIwNTAzMTQwMDA3WjAvBgkqhkiG9w0BCQQxIgQgxNfMhsMl1qnF
+# rGy0tlzY6yU2xhErbRN0hqmv02WWwDowDQYJKoZIhvcNAQEBBQAEggIAWE+453+s
+# jn/aL0r8aRPeVt92QUCabwjSm/L5/OspTwijfYDY/b17izBO48+sojusesGFlp6t
+# CK+qxGeOmHO7RUGwGPW5wKEGWD07e/nHdMDvZyoLgOT7uLRXdGQmNhlBHcUzMnaI
+# BrmeCXP0mVcuGFZvLSn9kYcWur8KTopYfmnarVGcp9vyxfxhwdixHuvsuOhhoc+F
+# He4TpiV3fSu2rcAFX9z1yNFXPrtAQCl6T99WzRxVs9AZF/y+pVe8xrKkHzM9oUJ6
+# ACCG2R9SL7abxu6draICckra4ASabFV62d7PmY5il6UFXf6WYdutbE95n5ySdxAT
+# CEVa9zz9N3IUGuw+9UlL1q/b5tXVejX3GsWZeTL1Z+HENJWUu74qt7f6glIfjwmZ
+# fOyFhIUAbIG+iC4czKZWnjQSyCVf/nA5wxUvWRhi5cHESOAn7paXb2roMelcmFqg
+# A8IrmFSVgHMDN1EGnGslzDkc3D2VwpBXDBRNp0SdbEHjRmAu+QnDyDbrgtUHvHhR
+# lK0CYxb9ba1g6MQ7tQ8C2etR6MAopnwpdq4qq//KlX3+kDmM7nJ/QP1F8Iu5GcfM
+# 7cboK6MvUp/iWJqCML4DIM35xWK2XAdy/TavhZVn/Osc+eM1bCEVNvpdubuLJHPl
+# pIfuLwC7rwaLtuVZEhJ8FM8bStAeDO7Qovc=
 # SIG # End signature block
