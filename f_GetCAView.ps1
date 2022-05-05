@@ -7,25 +7,31 @@
 
  .EXAMPLE
     Get all requests
-    Get-CAView -Request
+    Get-CAView -Requests
 
     Get pending requests
-    Get-CAView -Request -Status Pending
+    Get-CAView -Requests -Status Pending
 
     Get request with specific RequestId
-    Get-CAView -Request -RequestId <ID>
+    Get-CAView -Requests -RequestId <ID>
 
     Get request with specific Template OID
-    Get-CAView -Request -Template <OID>
+    Get-CAView -Requests -Template <OID>
 
     Get all extensions for specific RequestId
-    Get-CAView -Extension -RequestId <ID>
+    Get-CAView -Extensions -RequestId <ID>
 
     Get specific extension for specific RequestId
-    Get-CAView -Extension -Name <extension> -RequestId <ID>
+    Get-CAView -Extensions -Name <extension> -RequestId <ID>
 
-    Get request table schema
-    Get-CAView -Request -GetSchema
+    Get number of requests
+    Get-CAView -Requests -GetCount
+
+    Get number of pending request of a certain template
+    Get-CAView -Requests -GetCount -Status Pending -Template <OID>
+
+    Get requests table schema
+    Get-CAView -Requests -GetSchema
 
  .NOTES
     AUTHOR Jonas Henriksson
@@ -36,23 +42,26 @@
 
 function Get-CAView
 {
-    [cmdletbinding(DefaultParameterSetName='Request')]
+    [cmdletbinding(DefaultParameterSetName='Requests')]
 
     Param
     (
         [Parameter(ParameterSetName='Requests', Mandatory=$true)]
-        [Parameter(ParameterSetName='Requests_Schema', Mandatory=$true)]
+        [Parameter(ParameterSetName='Requests_GetCount', Mandatory=$true)]
+        [Parameter(ParameterSetName='Requests_GetSchema', Mandatory=$true)]
         [Switch]$Requests,
 
         [Parameter(ParameterSetName='Requests')]
+        [Parameter(ParameterSetName='Requests_GetCount')]
         [ValidateSet('Issued', 'Pending', 'Failed', 'Revoked')]
         [String]$Status,
 
         [Parameter(ParameterSetName='Requests')]
+        [Parameter(ParameterSetName='Requests_GetCount')]
         [String]$Template,
 
         [Parameter(ParameterSetName='Extensions', Mandatory=$true)]
-        [Parameter(ParameterSetName='Extensions_Schema', Mandatory=$true)]
+        [Parameter(ParameterSetName='Extensions_GetSchema', Mandatory=$true)]
         [Switch]$Extensions,
 
         [Parameter(ParameterSetName='Extensions')]
@@ -93,11 +102,11 @@ function Get-CAView
         [String]$RequestId,
 
         [Parameter(ParameterSetName='Attributes', Mandatory=$true)]
-        [Parameter(ParameterSetName='Attributes_Schema', Mandatory=$true)]
+        [Parameter(ParameterSetName='Attributes_GetSchema', Mandatory=$true)]
         [Switch]$Attributes,
 
         [Parameter(ParameterSetName='Crl', Mandatory=$true)]
-        [Parameter(ParameterSetName='Crl_Schema', Mandatory=$true)]
+        [Parameter(ParameterSetName='Crl_GetSchema', Mandatory=$true)]
         [Switch]$Crl,
 
         [Parameter(ParameterSetName='Requests')]
@@ -106,10 +115,13 @@ function Get-CAView
         [Parameter(ParameterSetName='Crl')]
         [Array]$Properties,
 
-        [Parameter(ParameterSetName='Requests_Schema', Mandatory=$true)]
-        [Parameter(ParameterSetName='Extensions_Schema', Mandatory=$true)]
-        [Parameter(ParameterSetName='Attributes_Schema', Mandatory=$true)]
-        [Parameter(ParameterSetName='Crl_Schema', Mandatory=$true)]
+        [Parameter(ParameterSetName='Requests_GetCount')]
+        [Switch]$GetCount,
+
+        [Parameter(ParameterSetName='Requests_GetSchema', Mandatory=$true)]
+        [Parameter(ParameterSetName='Extensions_GetSchema', Mandatory=$true)]
+        [Parameter(ParameterSetName='Attributes_GetSchema', Mandatory=$true)]
+        [Parameter(ParameterSetName='Crl_GetSchema', Mandatory=$true)]
         [Switch]$GetSchema,
 
         [String]$Config
@@ -272,10 +284,6 @@ function Get-CAView
                 {
                     $CaView.SetTable([CVRC_TABLE]::REQUESTS)
 
-                    ###################
-                    # Set restrictions
-                    ###################
-
                     switch($Status)
                     {
                         'Issued'
@@ -387,16 +395,6 @@ function Get-CAView
                 {
                     $CaView.SetTable([CVRC_TABLE]::EXTENSIONS)
 
-                    if ($Name)
-                    {
-                        $CaView.SetRestriction(
-                            $CaView.GetColumnIndex(0,"ExtensionName"),
-                            [CVR_SEEK]::EQ,
-                            0,
-                            $ExtensionTable["'$Name'"]
-                        )
-                    }
-
                     if ($RequestId)
                     {
                         $CaView.SetRestriction(
@@ -404,6 +402,16 @@ function Get-CAView
                             [CVR_SEEK]::EQ,
                             0,
                             [int]$RequestId
+                        )
+                    }
+
+                    if ($Name)
+                    {
+                        $CaView.SetRestriction(
+                            $CaView.GetColumnIndex(0,"ExtensionName"),
+                            [CVR_SEEK]::EQ,
+                            0,
+                            $ExtensionTable["'$Name'"]
                         )
                     }
 
@@ -440,6 +448,20 @@ function Get-CAView
             if ($GetSchema.IsPresent)
             {
                 Write-Output -InputObject (Get-AllColumns)
+            }
+
+            ############
+            # Get count
+            ############
+
+            elseif ($GetCount.IsPresent)
+            {
+                $CaView.SetResultColumnCount(0)
+
+                $Row = $CaView.OpenView()
+                $Row.Next() > $null
+
+                Write-Output -InputObject $Row.GetMaxIndex()
             }
 
             #############
@@ -483,6 +505,7 @@ function Get-CAView
 
                 while ($Row.Next() -ge 0)
                 {
+                    #Write-Host "Max: " $Row.GetMaxIndex()
                     $Output = New-Object psobject
                     $Column = $Row.EnumCertViewColumn()
 
@@ -541,7 +564,7 @@ function Get-CAView
                             {
                                 Add-Member -InputObject $Output `
                                            -MemberType NoteProperty `
-                                           -Name 'ExtensionReadableName' `
+                                           -Name 'ExtensionDisplayName' `
                                            -Value (($ExtensionTable.Keys | Where-Object { $ExtensionTable[$_] -eq $CValue }) -replace "'", '') `
                                            -Force
                             }
@@ -577,8 +600,8 @@ function Get-CAView
 # SIG # Begin signature block
 # MIIZBgYJKoZIhvcNAQcCoIIY9zCCGPMCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUHaTdJ+Rd6uYNrsGDaLvE+rMr
-# 7DygghKHMIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUpQcFduCJwHlxpWWsxKha6+RF
+# gWKgghKHMIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMTA2MDcxMjUwMzZaFw0yMzA2MDcx
 # MzAwMzNaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEAzdFz3tD9N0VebymwxbB7s+YMLFKK9LlPcOyyFbAoRnYKVuF7Q6Zi
@@ -680,33 +703,33 @@ function Get-CAView
 # 6TCCBeUCAQEwJDAQMQ4wDAYDVQQDDAVKME43RQIQJTSMe3EEUZZAAWO1zNUfWTAJ
 # BgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEKMAigAoAAoQKAADAZBgkqhkiG9w0B
 # CQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAj
-# BgkqhkiG9w0BCQQxFgQUeuhwFPo+sb+AU6Ey5+PNkWFP2gowDQYJKoZIhvcNAQEB
-# BQAEggIAPtEnbEgXNGvEIxaIMv4KnQoxwSDF3itl1ev2qb4TPc+3ADXpxjzsk8oh
-# oHXUQcCYfD68DM6jwtmAwSFV0esEtw7uwuWNPJrAo3AYSS8aW7a3Bt0t08dzG+yL
-# cB6fBf81l6atWO7KL17XBbGOffAqVowb+IffoxtF1VN/RHp809S/7C5Sx3w4YRUp
-# QOs5e5amBvNC2eV2ka6+fipBl+K5jREjdScvC6lsSr+/mSs1TOFnUYQygwNEb6D3
-# O/NJFfYareT2+X4L09eTWOBi+tgZ+3D8AEvOkg40uEKf1143TW+Sld6hNUZN4GWS
-# W00u939OIQ8rHwgGXeJ9TMcFycqVAbwoJLayPouhRd2jPTYPhHSSTXBaejNvb315
-# Od2R6Sw485fmgfcTE65QO1JtLgmXehyl0qSMnNji5uR1ix6pZg7B13irFKvNVb/d
-# iaPaUv75kkP9XBgbgkXUhbvkRS99Vd5RFZ0BwC+FKQCzkNji52buSKIuGq2XvhdE
-# dgxhJhYuSK4YtHgjJ5TK+9xjaj1f7uxqTbfEP6RkhwXF3rsXrIw1NJaqpUk619PM
-# 7OA6bcdPZjxy1nZlfAk0ZTNRG3ocl3fAKNgIFMn8+Z+hIi6+iCNWu+eazfTU0LSU
-# k1PABhPZeGeuqP4rlps7SBYQNc8Askxosq3pM8DnfA+N5ID4yDuhggMgMIIDHAYJ
+# BgkqhkiG9w0BCQQxFgQUXhkbInHZxuA1H9cxewMSttLW3KkwDQYJKoZIhvcNAQEB
+# BQAEggIAdtgAn4sMilbyfSrgYueBexE7cMjcMVXiYkKWCjXDWvnyEAxLTnlo5SUs
+# qZE8uvLpweYJ0Mv9dOjXotWi8LVAHLfe+4v0WJEe7bwxPg2oMYlXK48mR2+tSlt8
+# vsJ4CukOP3vujHMXdV75CBogthZTiljulpoUr0HGy6XCLHgG0Wq1Z1Ab3pQYN0yr
+# sCCvyICryNLLIGRpqSFMwkBQsilBlL/kT794uJe8J97eoks1QjAoGFKbIMU7tdjs
+# ULS0k/surgGW+27U8lesmq7zEIVHVLSR0BLUuefrCanzjJ9uc566er3e2uSaGDsB
+# 0XiGzDyt9TKUFYC3GeAgrG5+KwC5gUXgc30iNY7PgV6nznZIbq1ChSCSrzl8eQ4M
+# /CSj+vU8q3KdAkEDQ2NboPS+NmgO3G1RtppfmrnExlLv3PlfYD89ogSl9x8yvGl9
+# /skkdQ5zep4M2LeblkBhigcf4pPf5MRDGmf0uOlD2BRYfoNBBiHaK5naj/oeLrc4
+# V2rdL3b43SJ1B/ymDUKC28jNK9hVXslLeosMAwNVsf+lmHOHm4zDwZJgG4esQiED
+# U1HxrAyfHpYji6E1E7w0sidwrA51DrxKceBPmDWGit5+0lwDYzkT/1NGAaGqwmgO
+# tS53e+hOyNuSpORlN7FZr+VnPhprWqKMIEWyrirY0gFvazHAE3uhggMgMIIDHAYJ
 # KoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQswCQYDVQQGEwJVUzEXMBUGA1UEChMO
 # RGlnaUNlcnQsIEluYy4xOzA5BgNVBAMTMkRpZ2lDZXJ0IFRydXN0ZWQgRzQgUlNB
 # NDA5NiBTSEEyNTYgVGltZVN0YW1waW5nIENBAhAKekqInsmZQpAGYzhNhpedMA0G
 # CWCGSAFlAwQCAQUAoGkwGAYJKoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG
-# 9w0BCQUxDxcNMjIwNTAzMTQwMDA3WjAvBgkqhkiG9w0BCQQxIgQgxNfMhsMl1qnF
-# rGy0tlzY6yU2xhErbRN0hqmv02WWwDowDQYJKoZIhvcNAQEBBQAEggIAWE+453+s
-# jn/aL0r8aRPeVt92QUCabwjSm/L5/OspTwijfYDY/b17izBO48+sojusesGFlp6t
-# CK+qxGeOmHO7RUGwGPW5wKEGWD07e/nHdMDvZyoLgOT7uLRXdGQmNhlBHcUzMnaI
-# BrmeCXP0mVcuGFZvLSn9kYcWur8KTopYfmnarVGcp9vyxfxhwdixHuvsuOhhoc+F
-# He4TpiV3fSu2rcAFX9z1yNFXPrtAQCl6T99WzRxVs9AZF/y+pVe8xrKkHzM9oUJ6
-# ACCG2R9SL7abxu6draICckra4ASabFV62d7PmY5il6UFXf6WYdutbE95n5ySdxAT
-# CEVa9zz9N3IUGuw+9UlL1q/b5tXVejX3GsWZeTL1Z+HENJWUu74qt7f6glIfjwmZ
-# fOyFhIUAbIG+iC4czKZWnjQSyCVf/nA5wxUvWRhi5cHESOAn7paXb2roMelcmFqg
-# A8IrmFSVgHMDN1EGnGslzDkc3D2VwpBXDBRNp0SdbEHjRmAu+QnDyDbrgtUHvHhR
-# lK0CYxb9ba1g6MQ7tQ8C2etR6MAopnwpdq4qq//KlX3+kDmM7nJ/QP1F8Iu5GcfM
-# 7cboK6MvUp/iWJqCML4DIM35xWK2XAdy/TavhZVn/Osc+eM1bCEVNvpdubuLJHPl
-# pIfuLwC7rwaLtuVZEhJ8FM8bStAeDO7Qovc=
+# 9w0BCQUxDxcNMjIwNTA1MTEwMDAyWjAvBgkqhkiG9w0BCQQxIgQgjLTIEoMIEbEW
+# xmV5EhyzOV1xPTsSxy2hfMJ70sO1bfkwDQYJKoZIhvcNAQEBBQAEggIAOOrpClad
+# HiSZ5qJgpBZGs1rYhp+OQYeFtkQa5cyZPmYQw6xKsms+lYhDy/5kupR1BLGZVXWr
+# QRWLIhrwuPHJD42Up8GPd7klSX7+eeMEFKg817thUCQ37pU4dspbR16oQlUc9jPS
+# vHY3hp20pvXhMtCPcPfecI5Aqt1M7YAW0EkF+tCKlLuB822P1h3JwKDt0fJn/GkX
+# hsIxsfvHuBWjn3ekyaAbUFtaJ2pXVyQtSJLhKb2iemTjL3SB0YRyo4OvuJJ49ppZ
+# cIQKKkxa9bPQ0Nu+tDdtOyVMTwZqvCs4TUQJrBfsXsbSV+ImdrSsHRPF8V1ydxD3
+# 6PoeZOqJ560p6odzUdu2gwBzYWevF2OC7CHKdzPC6vugO89SfTe1He0ssQ21p6my
+# FkvAzTrbrTDiXjaU5iqdB7hhyKtCc2ZgJKFkmKiwVhvkOgD5i19ZQ5qR4+nHIfpR
+# 4qYTSlI6kfI2YerzCSigv7NTdzXhTjiSaifBv7CJ6a5CypiKYBIhqI1aLtACcXZd
+# QTdcNAJKfxIbFZvvULxDDlp4l3n7tTphRYwtKQkezG7Rq+J9aEWIXtn4V2hkdUYl
+# m4hthkIk/H4H2AVQHrvKrKMQonq+O6ZS00bi/vHrfxz07ixlS6WKaRlcvsv8Ru9B
+# T7UZRxGCOWR+OsHfVD5E5Mau4WP5chvEWPE=
 # SIG # End signature block
