@@ -47,16 +47,19 @@ function Get-CAView
     Param
     (
         [Parameter(ParameterSetName='Requests', Mandatory=$true)]
+        [Parameter(ParameterSetName='Requests_GetId', Mandatory=$true)]
         [Parameter(ParameterSetName='Requests_GetCount', Mandatory=$true)]
         [Parameter(ParameterSetName='Requests_GetSchema', Mandatory=$true)]
         [Switch]$Requests,
 
         [Parameter(ParameterSetName='Requests')]
+        [Parameter(ParameterSetName='Requests_GetId')]
         [Parameter(ParameterSetName='Requests_GetCount')]
         [ValidateSet('Issued', 'Pending', 'Failed', 'Revoked')]
         [String]$Status,
 
         [Parameter(ParameterSetName='Requests')]
+        [Parameter(ParameterSetName='Requests_GetId')]
         [Parameter(ParameterSetName='Requests_GetCount')]
         [String]$Template,
 
@@ -114,6 +117,9 @@ function Get-CAView
         [Parameter(ParameterSetName='Attributes')]
         [Parameter(ParameterSetName='Crl')]
         [Array]$Properties,
+
+        [Parameter(ParameterSetName='Requests_GetId')]
+        [Switch]$GetId,
 
         [Parameter(ParameterSetName='Requests_GetCount')]
         [Switch]$GetCount,
@@ -451,17 +457,40 @@ function Get-CAView
             }
 
             ############
+            # Get Id
             # Get count
             ############
 
-            elseif ($GetCount.IsPresent)
+            elseif ($GetId.IsPresent -or
+                    $GetCount.IsPresent)
             {
-                $CaView.SetResultColumnCount(0)
+                $CaView.SetResultColumnCount(1)
+                $CaView.SetResultColumn($CaView.GetColumnIndex(0, 'Request.RequestID'))
 
                 $Row = $CaView.OpenView()
-                $Row.Next() > $null
 
-                Write-Output -InputObject $Row.GetMaxIndex()
+                $Next = $Row.Next()
+                $Max  = $Row.GetMaxIndex()
+
+                if ($GetCount.IsPresent)
+                {
+                    Write-Output -InputObject $Max
+                }
+                else
+                {
+                    if ($Next -ge 0)
+                    {
+                        while ($Next -lt $Max)
+                        {
+                            $Next = $Row.Next()
+                        }
+
+                        $Column = $Row.EnumCertViewColumn()
+                        $Column.Next() > $null
+
+                        Write-Output -InputObject $Column.GetValue(1)
+                    }
+                }
             }
 
             #############
@@ -505,7 +534,6 @@ function Get-CAView
 
                 while ($Row.Next() -ge 0)
                 {
-                    #Write-Host "Max: " $Row.GetMaxIndex()
                     $Output = New-Object psobject
                     $Column = $Row.EnumCertViewColumn()
 
@@ -600,8 +628,8 @@ function Get-CAView
 # SIG # Begin signature block
 # MIIZBgYJKoZIhvcNAQcCoIIY9zCCGPMCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUpQcFduCJwHlxpWWsxKha6+RF
-# gWKgghKHMIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUW6FLBzRv4kpHTqkdnsBl5Yfy
+# H6mgghKHMIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMTA2MDcxMjUwMzZaFw0yMzA2MDcx
 # MzAwMzNaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEAzdFz3tD9N0VebymwxbB7s+YMLFKK9LlPcOyyFbAoRnYKVuF7Q6Zi
@@ -703,33 +731,33 @@ function Get-CAView
 # 6TCCBeUCAQEwJDAQMQ4wDAYDVQQDDAVKME43RQIQJTSMe3EEUZZAAWO1zNUfWTAJ
 # BgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEKMAigAoAAoQKAADAZBgkqhkiG9w0B
 # CQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAj
-# BgkqhkiG9w0BCQQxFgQUXhkbInHZxuA1H9cxewMSttLW3KkwDQYJKoZIhvcNAQEB
-# BQAEggIAdtgAn4sMilbyfSrgYueBexE7cMjcMVXiYkKWCjXDWvnyEAxLTnlo5SUs
-# qZE8uvLpweYJ0Mv9dOjXotWi8LVAHLfe+4v0WJEe7bwxPg2oMYlXK48mR2+tSlt8
-# vsJ4CukOP3vujHMXdV75CBogthZTiljulpoUr0HGy6XCLHgG0Wq1Z1Ab3pQYN0yr
-# sCCvyICryNLLIGRpqSFMwkBQsilBlL/kT794uJe8J97eoks1QjAoGFKbIMU7tdjs
-# ULS0k/surgGW+27U8lesmq7zEIVHVLSR0BLUuefrCanzjJ9uc566er3e2uSaGDsB
-# 0XiGzDyt9TKUFYC3GeAgrG5+KwC5gUXgc30iNY7PgV6nznZIbq1ChSCSrzl8eQ4M
-# /CSj+vU8q3KdAkEDQ2NboPS+NmgO3G1RtppfmrnExlLv3PlfYD89ogSl9x8yvGl9
-# /skkdQ5zep4M2LeblkBhigcf4pPf5MRDGmf0uOlD2BRYfoNBBiHaK5naj/oeLrc4
-# V2rdL3b43SJ1B/ymDUKC28jNK9hVXslLeosMAwNVsf+lmHOHm4zDwZJgG4esQiED
-# U1HxrAyfHpYji6E1E7w0sidwrA51DrxKceBPmDWGit5+0lwDYzkT/1NGAaGqwmgO
-# tS53e+hOyNuSpORlN7FZr+VnPhprWqKMIEWyrirY0gFvazHAE3uhggMgMIIDHAYJ
+# BgkqhkiG9w0BCQQxFgQUG81v0XT6+atQ+D5ifkOSgrQEx1MwDQYJKoZIhvcNAQEB
+# BQAEggIAFTRQbyaKfygnoFHOi8bnL1oB5JnpP0HCZBv2JcLGhAJrVh0rapgKDrKU
+# MEZJzwf8YKCtumbHqY4shTCSta6eABmX45WU160xoryBh+azP2a8NJDo9JcNgPEJ
+# DjWoNNjqtBHiuecAl/CspRaWm23uJ+rmS34qrS7EP+yqDHW8L3dgduRsjPeU2stb
+# YGoASuX88TDGkBTO/7Bk0WgVgouK0sTbKHLSjfHjeInYiYdYbjbD0ZDGPODNH36a
+# G0gYiGKyDRnRfo//2KDlsoo9Uyy9sirH9/+3XlD0RnKT2RclgSKsUkVOkQytuvnl
+# woOGpG0N21w4aaEihhAmSSw3uA61xmuCpy9kLwJEzjG9W2sAAZjSvekiUbz3pk54
+# QnyFYox7AvNI3zYEdfHgEiXhVne9aWAQwwfR4f1Yk0YEwekznftpiydX6cLAt/r6
+# r9cD0InPyGR9lKV9MSEmJehxGfZC3GoTuRPzdDRix9prOJzbkSCCiCXOnsfGbJ8l
+# +xDybfOG5U8mSEkp7s4FU4ZcycbMUdqVfglONTLsGKR2kvL1BpKQ8xEbBRRRI9+9
+# 8XiU+8HFcbig2zpQiPaXiY07bMrPAlzY6NLMyTiA0zVnfbBqaoPiR6HqOwA3yzat
+# GJl6Jlo4dqM7C5C4/HAboyvY3qjPOUABz6ZCTNSEc/0O8omIlxOhggMgMIIDHAYJ
 # KoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQswCQYDVQQGEwJVUzEXMBUGA1UEChMO
 # RGlnaUNlcnQsIEluYy4xOzA5BgNVBAMTMkRpZ2lDZXJ0IFRydXN0ZWQgRzQgUlNB
 # NDA5NiBTSEEyNTYgVGltZVN0YW1waW5nIENBAhAKekqInsmZQpAGYzhNhpedMA0G
 # CWCGSAFlAwQCAQUAoGkwGAYJKoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG
-# 9w0BCQUxDxcNMjIwNTA1MTEwMDAyWjAvBgkqhkiG9w0BCQQxIgQgjLTIEoMIEbEW
-# xmV5EhyzOV1xPTsSxy2hfMJ70sO1bfkwDQYJKoZIhvcNAQEBBQAEggIAOOrpClad
-# HiSZ5qJgpBZGs1rYhp+OQYeFtkQa5cyZPmYQw6xKsms+lYhDy/5kupR1BLGZVXWr
-# QRWLIhrwuPHJD42Up8GPd7klSX7+eeMEFKg817thUCQ37pU4dspbR16oQlUc9jPS
-# vHY3hp20pvXhMtCPcPfecI5Aqt1M7YAW0EkF+tCKlLuB822P1h3JwKDt0fJn/GkX
-# hsIxsfvHuBWjn3ekyaAbUFtaJ2pXVyQtSJLhKb2iemTjL3SB0YRyo4OvuJJ49ppZ
-# cIQKKkxa9bPQ0Nu+tDdtOyVMTwZqvCs4TUQJrBfsXsbSV+ImdrSsHRPF8V1ydxD3
-# 6PoeZOqJ560p6odzUdu2gwBzYWevF2OC7CHKdzPC6vugO89SfTe1He0ssQ21p6my
-# FkvAzTrbrTDiXjaU5iqdB7hhyKtCc2ZgJKFkmKiwVhvkOgD5i19ZQ5qR4+nHIfpR
-# 4qYTSlI6kfI2YerzCSigv7NTdzXhTjiSaifBv7CJ6a5CypiKYBIhqI1aLtACcXZd
-# QTdcNAJKfxIbFZvvULxDDlp4l3n7tTphRYwtKQkezG7Rq+J9aEWIXtn4V2hkdUYl
-# m4hthkIk/H4H2AVQHrvKrKMQonq+O6ZS00bi/vHrfxz07ixlS6WKaRlcvsv8Ru9B
-# T7UZRxGCOWR+OsHfVD5E5Mau4WP5chvEWPE=
+# 9w0BCQUxDxcNMjIwNTA2MTQwMDAzWjAvBgkqhkiG9w0BCQQxIgQgu+oynzInFDZ5
+# FNRW/nveAvfZGJ/63A5gyjGx8uwaQ9MwDQYJKoZIhvcNAQEBBQAEggIAstnKfqlm
+# yXJXHUojREbYQzn9vXM23YgnRQgLh3QKQFfxmvtt1FYS0yXBqWNHwAFGs1bbj8uW
+# k3eJM4hG1wBymSTuLIih0iyXfrfMa2wovtzfRRfR4KLLi0yyPGc5aGB47BwqlSmC
+# rF1ogju1TMiDpQIbzDURuOj41+PTIVjZNRR9CJ8T9OLVe9gv1NRvu186Mtx9blHe
+# KaGEx6lJubIOU/V+BAkwgiYITjY7P3LF4R8AYauvLOmGpHLUyR0gybZI0h4JYh7Q
+# KUeeG4+cdU6HUIvbyuFJgXE2Tq/XjkGhKwdmHeOo2ab2skiCAoG7Zs2tFZA3iuvZ
+# i3peNnFVZPSBnR/4C5w/ZzCfJkgd+goNviuUL1G3Du9GbO1ZoS3w2aU+O6iEWx6u
+# eNzTmCl8WhFLH077YaWKJHbwM03fLUkkfvn6f9lAmasxbHDM8bpxFbsvAsKXlcUA
+# fv4oGFkCZKcF9rjPagBoKmSZavDTLgF16mT4DGHhgf1ljjatMrk+6d3VRp7RmMes
+# AslVXMP908wmTRoVdS4EGS8yg49HupOcR4ic80Nv2rSAT4OFO0mGWujSsBvNze3b
+# riEB9yHO8Wedp+F/vuUkLpYBV5DxaF8JEc3VsAoAMunBvhZDfT8klkwgiPh87hSi
+# SgVHa90jZiRx57btBgTuRevZ7V1MOuano4c=
 # SIG # End signature block
