@@ -30,6 +30,9 @@
     Get number of pending request of a certain template
     Get-CAView -Requests -GetCount -Status Pending -Template <OID>
 
+    Get last requestId
+    Get-CAView -Requests -GetMaxId
+
     Get requests table schema
     Get-CAView -Requests -GetSchema
 
@@ -47,20 +50,20 @@ function Get-CAView
     Param
     (
         [Parameter(ParameterSetName='Requests', Mandatory=$true)]
-        [Parameter(ParameterSetName='Requests_GetId', Mandatory=$true)]
         [Parameter(ParameterSetName='Requests_GetCount', Mandatory=$true)]
+        [Parameter(ParameterSetName='Requests_GetMaxId', Mandatory=$true)]
         [Parameter(ParameterSetName='Requests_GetSchema', Mandatory=$true)]
         [Switch]$Requests,
 
         [Parameter(ParameterSetName='Requests')]
-        [Parameter(ParameterSetName='Requests_GetId')]
         [Parameter(ParameterSetName='Requests_GetCount')]
+        [Parameter(ParameterSetName='Requests_GetMaxId')]
         [ValidateSet('Issued', 'Pending', 'Failed', 'Revoked')]
         [String]$Status,
 
         [Parameter(ParameterSetName='Requests')]
-        [Parameter(ParameterSetName='Requests_GetId')]
         [Parameter(ParameterSetName='Requests_GetCount')]
+        [Parameter(ParameterSetName='Requests_GetMaxId')]
         [String]$Template,
 
         [Parameter(ParameterSetName='Extensions', Mandatory=$true)]
@@ -118,11 +121,11 @@ function Get-CAView
         [Parameter(ParameterSetName='Crl')]
         [Array]$Properties,
 
-        [Parameter(ParameterSetName='Requests_GetId')]
-        [Switch]$GetId,
-
         [Parameter(ParameterSetName='Requests_GetCount')]
         [Switch]$GetCount,
+
+        [Parameter(ParameterSetName='Requests_GetMaxId')]
+        [Switch]$GetMaxId,
 
         [Parameter(ParameterSetName='Requests_GetSchema', Mandatory=$true)]
         [Parameter(ParameterSetName='Extensions_GetSchema', Mandatory=$true)]
@@ -461,7 +464,7 @@ function Get-CAView
             # Get count
             ############
 
-            elseif ($GetId.IsPresent -or
+            elseif ($GetMaxId.IsPresent -or
                     $GetCount.IsPresent)
             {
                 $CaView.SetResultColumnCount(1)
@@ -628,8 +631,8 @@ function Get-CAView
 # SIG # Begin signature block
 # MIIZBgYJKoZIhvcNAQcCoIIY9zCCGPMCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUW6FLBzRv4kpHTqkdnsBl5Yfy
-# H6mgghKHMIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUXxlksiC5Z75S8s1BMOYJcXLR
+# cGegghKHMIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMTA2MDcxMjUwMzZaFw0yMzA2MDcx
 # MzAwMzNaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEAzdFz3tD9N0VebymwxbB7s+YMLFKK9LlPcOyyFbAoRnYKVuF7Q6Zi
@@ -731,33 +734,33 @@ function Get-CAView
 # 6TCCBeUCAQEwJDAQMQ4wDAYDVQQDDAVKME43RQIQJTSMe3EEUZZAAWO1zNUfWTAJ
 # BgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEKMAigAoAAoQKAADAZBgkqhkiG9w0B
 # CQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAj
-# BgkqhkiG9w0BCQQxFgQUG81v0XT6+atQ+D5ifkOSgrQEx1MwDQYJKoZIhvcNAQEB
-# BQAEggIAFTRQbyaKfygnoFHOi8bnL1oB5JnpP0HCZBv2JcLGhAJrVh0rapgKDrKU
-# MEZJzwf8YKCtumbHqY4shTCSta6eABmX45WU160xoryBh+azP2a8NJDo9JcNgPEJ
-# DjWoNNjqtBHiuecAl/CspRaWm23uJ+rmS34qrS7EP+yqDHW8L3dgduRsjPeU2stb
-# YGoASuX88TDGkBTO/7Bk0WgVgouK0sTbKHLSjfHjeInYiYdYbjbD0ZDGPODNH36a
-# G0gYiGKyDRnRfo//2KDlsoo9Uyy9sirH9/+3XlD0RnKT2RclgSKsUkVOkQytuvnl
-# woOGpG0N21w4aaEihhAmSSw3uA61xmuCpy9kLwJEzjG9W2sAAZjSvekiUbz3pk54
-# QnyFYox7AvNI3zYEdfHgEiXhVne9aWAQwwfR4f1Yk0YEwekznftpiydX6cLAt/r6
-# r9cD0InPyGR9lKV9MSEmJehxGfZC3GoTuRPzdDRix9prOJzbkSCCiCXOnsfGbJ8l
-# +xDybfOG5U8mSEkp7s4FU4ZcycbMUdqVfglONTLsGKR2kvL1BpKQ8xEbBRRRI9+9
-# 8XiU+8HFcbig2zpQiPaXiY07bMrPAlzY6NLMyTiA0zVnfbBqaoPiR6HqOwA3yzat
-# GJl6Jlo4dqM7C5C4/HAboyvY3qjPOUABz6ZCTNSEc/0O8omIlxOhggMgMIIDHAYJ
+# BgkqhkiG9w0BCQQxFgQUUl4CXivXJ06SFGX78mBw0QjQuP8wDQYJKoZIhvcNAQEB
+# BQAEggIAixH4X237/WFtC2bpBPKAAvatkL2ElQok8lAnVbseQ/dczadeA6mwuTK5
+# sZFj42SLi+DtuRw8/Cx1h2oA6GX9r1Xu440UhKAhespuRxtiZtk8q7i+CwevFrFJ
+# 0rk8R+C1F4EctRaMu9WUaMX5IVdVRu9B3Ax7pyqqwkT9OkfWSFE9+KyzpjbhAIDt
+# gh3RMpKGHMSm3OPvt7V60EqFsSXFc/2Reaa6uNGWOMubCJut+ABla8GSWivNgTcu
+# sFjbvEvnhG/iLAv5WS5dX+an3Ci5KavUQzUYg4PnXLp9vxCPYQZU9NSAQgxgSkJA
+# gVqvfQc8bvaeCa1hEHYmQT2GdxMoo0Bv1VXboJB6SlS59W1Maek16LlZ8NffDw7y
+# fxMLTl2FisvEam+qOQPXMVup3vy59wnesUh9T07vSxyTtiYoMd3bR+g3jOCNTvZ3
+# kGXDmXeXG3iy8luFJ3LPGkeq4U70AC90Z6CK5rhNIrSF5IOCGULTe3/49ogxlLX3
+# 0zHtTYHbK4UPkqbB6fudKn1AYc0baqRCUF8zdhnS7zXb3RcwwA9E3TAGfJbbb9Kf
+# 6MPA7OFsnUYjLUbQ3dmVScdf30iU/eL00wyIu1EALBY8JaamNNIsTFhO6IOfxZR9
+# cx6I2T+4eBD+KecxKWQzz+ngCT+beyHZsOuPNWV44LY/MbfCxUyhggMgMIIDHAYJ
 # KoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQswCQYDVQQGEwJVUzEXMBUGA1UEChMO
 # RGlnaUNlcnQsIEluYy4xOzA5BgNVBAMTMkRpZ2lDZXJ0IFRydXN0ZWQgRzQgUlNB
 # NDA5NiBTSEEyNTYgVGltZVN0YW1waW5nIENBAhAKekqInsmZQpAGYzhNhpedMA0G
 # CWCGSAFlAwQCAQUAoGkwGAYJKoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG
-# 9w0BCQUxDxcNMjIwNTA2MTQwMDAzWjAvBgkqhkiG9w0BCQQxIgQgu+oynzInFDZ5
-# FNRW/nveAvfZGJ/63A5gyjGx8uwaQ9MwDQYJKoZIhvcNAQEBBQAEggIAstnKfqlm
-# yXJXHUojREbYQzn9vXM23YgnRQgLh3QKQFfxmvtt1FYS0yXBqWNHwAFGs1bbj8uW
-# k3eJM4hG1wBymSTuLIih0iyXfrfMa2wovtzfRRfR4KLLi0yyPGc5aGB47BwqlSmC
-# rF1ogju1TMiDpQIbzDURuOj41+PTIVjZNRR9CJ8T9OLVe9gv1NRvu186Mtx9blHe
-# KaGEx6lJubIOU/V+BAkwgiYITjY7P3LF4R8AYauvLOmGpHLUyR0gybZI0h4JYh7Q
-# KUeeG4+cdU6HUIvbyuFJgXE2Tq/XjkGhKwdmHeOo2ab2skiCAoG7Zs2tFZA3iuvZ
-# i3peNnFVZPSBnR/4C5w/ZzCfJkgd+goNviuUL1G3Du9GbO1ZoS3w2aU+O6iEWx6u
-# eNzTmCl8WhFLH077YaWKJHbwM03fLUkkfvn6f9lAmasxbHDM8bpxFbsvAsKXlcUA
-# fv4oGFkCZKcF9rjPagBoKmSZavDTLgF16mT4DGHhgf1ljjatMrk+6d3VRp7RmMes
-# AslVXMP908wmTRoVdS4EGS8yg49HupOcR4ic80Nv2rSAT4OFO0mGWujSsBvNze3b
-# riEB9yHO8Wedp+F/vuUkLpYBV5DxaF8JEc3VsAoAMunBvhZDfT8klkwgiPh87hSi
-# SgVHa90jZiRx57btBgTuRevZ7V1MOuano4c=
+# 9w0BCQUxDxcNMjIwNTA5MDgwMDAzWjAvBgkqhkiG9w0BCQQxIgQgS3sRYP2krjZH
+# WCqBZENPmsBcilQxLhuMRlmMF+PxLBEwDQYJKoZIhvcNAQEBBQAEggIAt4PIcDU1
+# +FSvlrRpENdY9HI36YN498oh8UlLranHcOK6uEvLtwmibaSdlapZJYdzTXRU7Zb6
+# s1FgdQSq7V3asLdEy7P818JXCxQUCI0qy6jB0SNCTGnBISUGQhbMn0s6LeTcI9zA
+# GOLljo0tjtgUgT98K7h4hr5rirnNER3WR5uINKMbM55kL50yQT0LDIDK+PeTy0uR
+# stpHryDLQRwq9EWHqDg/UzW8yYAk6htydWAJLhZybhBuZI36pxCZW8nB1sjPH+I3
+# /73v5Vf3cTw/yPTNKFo8q5JFFQzbKvZA2j46xX/hleUl6a28gz8yfUyUmKhJubo8
+# /iYU496RWR1cMB5QG2SuhIylE90xDyL83XoBrJUxaBhRe99mSrak3l4mKu18FoEk
+# qBSqUojmbEjs1NbFqiy18zANbwEsB5geNh6fiOSdR2U3iwS8zpxW3MUf2+eD5eN4
+# D8WFgP83iYjBPWmLXBwiH1ZKHqwTz6YNNaLGU+/WjkBnd1T0mq3Qq7jdrMYuaWiQ
+# oVt/jizFIukiu5gl7GbJrZYtcxCrjmYo6++tlMfmD0ekLuAsxQG7j9SIY+DnVXe2
+# 8Z0zc2H4VgvuyaSVhwwGuAtPxlYY/Wqr6BHFdhh88gWVeohnDyWsO/sJaVf/sHiH
+# XTCqe9kZg0AVuijfJMpxWSVHRdBNO4bWnGM=
 # SIG # End signature block
