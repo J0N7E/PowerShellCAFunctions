@@ -73,23 +73,27 @@ function Get-CAView
         [Parameter(ParameterSetName='Extensions')]
         [ArgumentCompleter({
 
-            $ExtensionTable =
-            @{
-                "'SMIME Capabilities'"                = '1.2.840.113549.1.9.15'
-                "'Certificate Type'"                  = '1.3.6.1.4.1.311.20.2'
-                "'CA Version'"                        = '1.3.6.1.4.1.311.21.1'
-                "'Certificate Template Information'"  = '1.3.6.1.4.1.311.21.7'
-                "'Application Policies'"              = '1.3.6.1.4.1.311.21.10'
-                "'Authority Information Access'"      = '1.3.6.1.5.5.7.1.1'
-                "'OCSP No Revocation Checking'"       = '1.3.6.1.5.5.7.48.1.5'
-                "'Subject Key Identifier'"            = '2.5.29.14'
-                "'Key Usage'"                         = '2.5.29.15'
-                "'Subject Alternative Name'"          = '2.5.29.17'
-                "'Basic Constraints'"                 = '2.5.29.19'
-                "'CRL Distribution Points'"           = '2.5.29.31'
-                "'Certificate Policies'"              = '2.5.29.32'
-                "'Authority Key Identifier'"          = '2.5.29.35'
-                "'Enhanced Key Usage'"                = '2.5.29.37'
+            $ExtensionTable = @{}
+            @(
+                '1.2.840.113549.1.9.15'
+                '1.3.6.1.4.1.311.20.2'
+                '1.3.6.1.4.1.311.21.1'
+                '1.3.6.1.4.1.311.21.7'
+                '1.3.6.1.4.1.311.21.10'
+                '1.3.6.1.5.5.7.1.1'
+                '1.3.6.1.5.5.7.48.1.5'
+                '2.5.29.14'
+                '2.5.29.15'
+                '2.5.29.17'
+                '2.5.29.19'
+                '2.5.29.31'
+                '2.5.29.32'
+                '2.5.29.35'
+                '2.5.29.37'
+            ) | ForEach-Object {
+                $ExtensionTable += @{
+                    "'$([System.Security.Cryptography.Oid]::New($_).FriendlyName)'" = $_
+                }
             }
 
             if ($args[4].GetHashtable)
@@ -106,6 +110,9 @@ function Get-CAView
         [Parameter(ParameterSetName='Requests')]
         [Parameter(ParameterSetName='Extensions')]
         [String]$RequestId,
+
+        [Parameter(ParameterSetName='Requests')]
+        [String]$SerialNumber,
 
         [Parameter(ParameterSetName='Attributes', Mandatory=$true)]
         [Parameter(ParameterSetName='Attributes_GetSchema', Mandatory=$true)]
@@ -189,16 +196,20 @@ function Get-CAView
             LOG_FAILED    = -3
             LOG_REVOKED   = -7
         }
-        enum Disposition
+
+        # https://github.com/tpn/winsdk-10/blob/master/Include/10.0.16299.0/um/CertSrv.h
+        enum DB_DISP
         {
-            Active             = 8
-            Pending            = 9
-            CACertificate      = 15
-            CACertificateChain = 16
-            Issued             = 20
-            Revoked            = 21
-            Failed             = 30
-            Denied             = 31
+            ACTIVE        = 8
+            PENDING       = 9
+            FOREIGN       = 12 # Archived
+            CA_CERT       = 15
+            CA_CERT_CHAIN = 16
+            KRA_CERT      = 17
+            ISSUED        = 20
+            REVOKED       = 21
+            ERROR         = 30
+            DENIED        = 31
         }
 
         ############
@@ -301,19 +312,19 @@ function Get-CAView
                                 $CaView.GetColumnIndex(0, 'Disposition'),
                                 [CVR_SEEK]::EQ,
                                 0,
-                                [Disposition]::Issued
+                                [DB_DISP]::ISSUED
                             )
 
                             $ResultColumns =
                             (
                                 'Request.RequestID',
                                 'Request.RequesterName',
-                                'CommonName',
                                 'NotBefore',
                                 'NotAfter',
-                                'CertificateTemplate',
+                                'DistinguishedName',
                                 'SerialNumber',
-                                'CertificateHash'
+                                'CertificateHash',
+                                'CertificateTemplate'
                             )
                         }
 
@@ -324,9 +335,9 @@ function Get-CAView
                             $ResultColumns =
                             (
                                 'Request.RequestID',
-                                'Request.RequesterName',
                                 'Request.CommonName',
                                 'Request.SubmittedWhen',
+                                'DistinguishedName',
                                 'CertificateTemplate'
                             )
                         }
@@ -339,10 +350,10 @@ function Get-CAView
                             (
                                 'Request.RequestID',
                                 'Request.RequesterName',
-                                'Request.CommonName',
                                 'Request.SubmittedWhen',
                                 'Request.StatusCode',
                                 'Request.DispositionMessage',
+                                'DistinguishedName',
                                 'CertificateTemplate'
                             )
                         }
@@ -353,17 +364,18 @@ function Get-CAView
                                 $CaView.GetColumnIndex(0, 'Disposition'),
                                 [CVR_SEEK]::EQ,
                                 0,
-                                [Disposition]::Revoked
+                                [DB_DISP]::REVOKED
                             )
 
                             $ResultColumns =
                             (
                                 'Request.RequestID',
-                                'Request.CommonName',
                                 'Request.RevokedWhen',
                                 'Request.RevokedReason',
+                                'DistinguishedName',
                                 'SerialNumber',
-                                'CertificateHash'
+                                'CertificateHash',
+                                'CertificateTemplate'
                             )
                         }
 
@@ -373,8 +385,7 @@ function Get-CAView
                             (
                                 'Request.RequestID',
                                 'Request.RequesterName',
-                                'Request.CommonName',
-                                'CertificateTemplate'
+                                'DistinguishedName'
                             )
                         }
                     }
@@ -385,7 +396,17 @@ function Get-CAView
                             $CaView.GetColumnIndex(0,"Request.RequestID"),
                             [CVR_SEEK]::EQ,
                             0,
-                            [int]$RequestId
+                            [Int]$RequestId
+                        )
+                    }
+
+                    if ($SerialNumber)
+                    {
+                        $CaView.SetRestriction(
+                            $CaView.GetColumnIndex(0,"SerialNumber"),
+                            [CVR_SEEK]::EQ,
+                            0,
+                            $SerialNumber
                         )
                     }
 
@@ -581,8 +602,19 @@ function Get-CAView
                         # Add extra
                         switch ($CName)
                         {
+                            'Disposition'
+                            {
+                                # DispositionFriendlyName
+                                Add-Member -InputObject $Output `
+                                           -MemberType NoteProperty `
+                                           -Name 'DispositionFriendlyName' `
+                                           -Value ([DB_DISP]$CVAlue) `
+                                           -Force
+                            }
+
                             'CertificateTemplate'
                             {
+                                # CertificateTemplateFriendlyName
                                 Add-Member -InputObject $Output `
                                            -MemberType NoteProperty `
                                            -Name 'CertificateTemplateFriendlyName' `
@@ -593,6 +625,7 @@ function Get-CAView
 
                             'ExtensionName'
                             {
+                                # ExtensionDisplayName
                                 Add-Member -InputObject $Output `
                                            -MemberType NoteProperty `
                                            -Name 'ExtensionDisplayName' `
@@ -602,6 +635,7 @@ function Get-CAView
 
                             'ExtensionRawValue'
                             {
+                                # ExtensionValue
                                 Add-Member -InputObject $Output `
                                            -MemberType NoteProperty `
                                            -Name 'ExtensionValue' `
@@ -631,8 +665,8 @@ function Get-CAView
 # SIG # Begin signature block
 # MIIZBgYJKoZIhvcNAQcCoIIY9zCCGPMCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUXxlksiC5Z75S8s1BMOYJcXLR
-# cGegghKHMIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUICTokwUy3D4cE6aI3kcRNX6h
+# 8uigghKHMIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMTA2MDcxMjUwMzZaFw0yMzA2MDcx
 # MzAwMzNaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEAzdFz3tD9N0VebymwxbB7s+YMLFKK9LlPcOyyFbAoRnYKVuF7Q6Zi
@@ -734,33 +768,33 @@ function Get-CAView
 # 6TCCBeUCAQEwJDAQMQ4wDAYDVQQDDAVKME43RQIQJTSMe3EEUZZAAWO1zNUfWTAJ
 # BgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEKMAigAoAAoQKAADAZBgkqhkiG9w0B
 # CQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAj
-# BgkqhkiG9w0BCQQxFgQUUl4CXivXJ06SFGX78mBw0QjQuP8wDQYJKoZIhvcNAQEB
-# BQAEggIAixH4X237/WFtC2bpBPKAAvatkL2ElQok8lAnVbseQ/dczadeA6mwuTK5
-# sZFj42SLi+DtuRw8/Cx1h2oA6GX9r1Xu440UhKAhespuRxtiZtk8q7i+CwevFrFJ
-# 0rk8R+C1F4EctRaMu9WUaMX5IVdVRu9B3Ax7pyqqwkT9OkfWSFE9+KyzpjbhAIDt
-# gh3RMpKGHMSm3OPvt7V60EqFsSXFc/2Reaa6uNGWOMubCJut+ABla8GSWivNgTcu
-# sFjbvEvnhG/iLAv5WS5dX+an3Ci5KavUQzUYg4PnXLp9vxCPYQZU9NSAQgxgSkJA
-# gVqvfQc8bvaeCa1hEHYmQT2GdxMoo0Bv1VXboJB6SlS59W1Maek16LlZ8NffDw7y
-# fxMLTl2FisvEam+qOQPXMVup3vy59wnesUh9T07vSxyTtiYoMd3bR+g3jOCNTvZ3
-# kGXDmXeXG3iy8luFJ3LPGkeq4U70AC90Z6CK5rhNIrSF5IOCGULTe3/49ogxlLX3
-# 0zHtTYHbK4UPkqbB6fudKn1AYc0baqRCUF8zdhnS7zXb3RcwwA9E3TAGfJbbb9Kf
-# 6MPA7OFsnUYjLUbQ3dmVScdf30iU/eL00wyIu1EALBY8JaamNNIsTFhO6IOfxZR9
-# cx6I2T+4eBD+KecxKWQzz+ngCT+beyHZsOuPNWV44LY/MbfCxUyhggMgMIIDHAYJ
+# BgkqhkiG9w0BCQQxFgQURoGCFF3rLRbf6BE68Y8B9t2FLTwwDQYJKoZIhvcNAQEB
+# BQAEggIAgimCoQNRq5JX9fDG5VKL0yTqZyCDwJbUm3BX9HddkceQwaxjIR8HMc49
+# yAZMwRNny6tlFhvugCJBF1gbDAanAejxgdleMVZWcFVAb9Vcot01DgW+UXnoREib
+# XWzDZvlVkjvEoNHH6Jr3Su4Tz9QC2niaxP6VY1lOxTfFuqWrdPBv3tc1/5iEnm1u
+# hgTzoEAJEEXqqcjaHIOyxmyTR0UPhL5c18IUARTt2Pecz72HJv2LbJ9aUYKzyvOS
+# iRKhryOVPPswRWtRZDVyuHoJuFr103jr9oGYhk8u6I0bRIG3icWN86qHffKYXYdc
+# 8NYQwOlkjAU8z1un4K/AmDMpxp3emIss8KdE4mqvTXzoc+ijFiMDadbnIprX3k06
+# hFjuuT5OqD6dZ40CfbdO10OCLSqPmsXGC9PMBh5YDtAPvFMpzG75iK7/4ocfP2Ey
+# zxj4YraGBjT5c6jKnX32BIoWHI4JNafHyjZRMXlLFplr+0UxDn1xHHpKW/ppTjLx
+# jQzF+aYLXM9wtT0p+d6k09Voya/G2/Xsfx5hrHhrojXUjUlWaKqpCG3pNlUhzTpG
+# GcMPBFoWFcmTCs/Mg9th+Z9SxGKy/48rF2VaZsbM94JhrES0rDTVmyzx+zSyEBwU
+# Z30vSc6wtTafvhrhjYy0LkFr5pRwQjAKmar5TXh3f0+TGg97OyKhggMgMIIDHAYJ
 # KoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQswCQYDVQQGEwJVUzEXMBUGA1UEChMO
 # RGlnaUNlcnQsIEluYy4xOzA5BgNVBAMTMkRpZ2lDZXJ0IFRydXN0ZWQgRzQgUlNB
 # NDA5NiBTSEEyNTYgVGltZVN0YW1waW5nIENBAhAKekqInsmZQpAGYzhNhpedMA0G
 # CWCGSAFlAwQCAQUAoGkwGAYJKoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG
-# 9w0BCQUxDxcNMjIwNTA5MDgwMDAzWjAvBgkqhkiG9w0BCQQxIgQgS3sRYP2krjZH
-# WCqBZENPmsBcilQxLhuMRlmMF+PxLBEwDQYJKoZIhvcNAQEBBQAEggIAt4PIcDU1
-# +FSvlrRpENdY9HI36YN498oh8UlLranHcOK6uEvLtwmibaSdlapZJYdzTXRU7Zb6
-# s1FgdQSq7V3asLdEy7P818JXCxQUCI0qy6jB0SNCTGnBISUGQhbMn0s6LeTcI9zA
-# GOLljo0tjtgUgT98K7h4hr5rirnNER3WR5uINKMbM55kL50yQT0LDIDK+PeTy0uR
-# stpHryDLQRwq9EWHqDg/UzW8yYAk6htydWAJLhZybhBuZI36pxCZW8nB1sjPH+I3
-# /73v5Vf3cTw/yPTNKFo8q5JFFQzbKvZA2j46xX/hleUl6a28gz8yfUyUmKhJubo8
-# /iYU496RWR1cMB5QG2SuhIylE90xDyL83XoBrJUxaBhRe99mSrak3l4mKu18FoEk
-# qBSqUojmbEjs1NbFqiy18zANbwEsB5geNh6fiOSdR2U3iwS8zpxW3MUf2+eD5eN4
-# D8WFgP83iYjBPWmLXBwiH1ZKHqwTz6YNNaLGU+/WjkBnd1T0mq3Qq7jdrMYuaWiQ
-# oVt/jizFIukiu5gl7GbJrZYtcxCrjmYo6++tlMfmD0ekLuAsxQG7j9SIY+DnVXe2
-# 8Z0zc2H4VgvuyaSVhwwGuAtPxlYY/Wqr6BHFdhh88gWVeohnDyWsO/sJaVf/sHiH
-# XTCqe9kZg0AVuijfJMpxWSVHRdBNO4bWnGM=
+# 9w0BCQUxDxcNMjIwNTE3MTcwMDA0WjAvBgkqhkiG9w0BCQQxIgQgdh4qWevVPE61
+# 88B01a+5Nm0pAj6V+DbVfA4Cf1pHaAkwDQYJKoZIhvcNAQEBBQAEggIAOXNj+XB0
+# JY0ZGfPEjaQ12Sw6vnnEshHZd55Wzx0ST0E0AD4xnDXcfJMT4dZiqLMFOO9seA+O
+# QIINP4coYW/nzlFPRsJB9REycACmqTVfVQ9+IPgos+JDGZKE2yOgPPpLGwTf+IaY
+# oK1qa9jw2F5akP/wP8ryPn2RSFMUbc89pHIMl4k+1JxTkn8HvnZvqLYHlsdnfyMH
+# nK1MQgmzmojrQRVZKCxF8ZF60sEygnoVUCyn/KyRa+crVXQFsCgsZDiD9uhDpaX/
+# /ydBZTXLOnWpNlYQsU6gfvqyuGwbmuxu8pSmR5Dpi+JfdNiW8aHrhVS1hAgjRgCM
+# Zb6SGEDuW50JK74civyq6om8tH1UGPVjdsOBjrfkZFL9LkhtMn2ToQ6jSuBHyzsh
+# aMhMS+BuPokbi+Y8+9lzyYXa+sW+FRyShzb4WiucM8uqWuS9E17jJU26sATMZ6HQ
+# 0topYNsBSala/O4nJEcJhkqbNWH7pViltK7nK9hL0YzXm1en4CTuZe+JFhNjuA/a
+# ErCxIEL5ZNFGAhnBVf1M3lw/NoEWZkJYaJAbOlMrhEZK51UVSWN5t3RQLEbiqau7
+# zkr7q75bEQol1uhXGNlL+MQA3ngPj6HqOnidQBcldiUL+IXYXlHKPGWVpAQGDwLz
+# rN/jC68lnJq8Cw7bjmwu6RpLfDWAQ0S+AZw=
 # SIG # End signature block
