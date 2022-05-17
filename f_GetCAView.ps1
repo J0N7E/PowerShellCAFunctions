@@ -569,10 +569,12 @@ function Get-CAView
                         # Change values
                         switch ($CName)
                         {
-                            'CertificateHash'
+                            { $_ -in @('CertificateHash',
+                                       'SubjectKeyIdentifier') }
                             {
                                 $CValue = $CValue -replace ' ', ''
                             }
+
                         }
 
                         # Add
@@ -604,11 +606,11 @@ function Get-CAView
                         {
                             'Disposition'
                             {
-                                # DispositionFriendlyName
+                                # DispositionEnum
                                 Add-Member -InputObject $Output `
                                            -MemberType NoteProperty `
-                                           -Name 'DispositionFriendlyName' `
-                                           -Value ([DB_DISP]$CVAlue) `
+                                           -Name 'DispositionEnum' `
+                                           -Value ([string][DB_DISP]$CVAlue) `
                                            -Force
                             }
 
@@ -665,8 +667,8 @@ function Get-CAView
 # SIG # Begin signature block
 # MIIZBgYJKoZIhvcNAQcCoIIY9zCCGPMCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUICTokwUy3D4cE6aI3kcRNX6h
-# 8uigghKHMIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQURgofS96UBmdOWbnP7r3wEkEO
+# qwmgghKHMIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMTA2MDcxMjUwMzZaFw0yMzA2MDcx
 # MzAwMzNaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEAzdFz3tD9N0VebymwxbB7s+YMLFKK9LlPcOyyFbAoRnYKVuF7Q6Zi
@@ -768,33 +770,33 @@ function Get-CAView
 # 6TCCBeUCAQEwJDAQMQ4wDAYDVQQDDAVKME43RQIQJTSMe3EEUZZAAWO1zNUfWTAJ
 # BgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEKMAigAoAAoQKAADAZBgkqhkiG9w0B
 # CQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3AgELMQ4wDAYKKwYBBAGCNwIBFTAj
-# BgkqhkiG9w0BCQQxFgQURoGCFF3rLRbf6BE68Y8B9t2FLTwwDQYJKoZIhvcNAQEB
-# BQAEggIAgimCoQNRq5JX9fDG5VKL0yTqZyCDwJbUm3BX9HddkceQwaxjIR8HMc49
-# yAZMwRNny6tlFhvugCJBF1gbDAanAejxgdleMVZWcFVAb9Vcot01DgW+UXnoREib
-# XWzDZvlVkjvEoNHH6Jr3Su4Tz9QC2niaxP6VY1lOxTfFuqWrdPBv3tc1/5iEnm1u
-# hgTzoEAJEEXqqcjaHIOyxmyTR0UPhL5c18IUARTt2Pecz72HJv2LbJ9aUYKzyvOS
-# iRKhryOVPPswRWtRZDVyuHoJuFr103jr9oGYhk8u6I0bRIG3icWN86qHffKYXYdc
-# 8NYQwOlkjAU8z1un4K/AmDMpxp3emIss8KdE4mqvTXzoc+ijFiMDadbnIprX3k06
-# hFjuuT5OqD6dZ40CfbdO10OCLSqPmsXGC9PMBh5YDtAPvFMpzG75iK7/4ocfP2Ey
-# zxj4YraGBjT5c6jKnX32BIoWHI4JNafHyjZRMXlLFplr+0UxDn1xHHpKW/ppTjLx
-# jQzF+aYLXM9wtT0p+d6k09Voya/G2/Xsfx5hrHhrojXUjUlWaKqpCG3pNlUhzTpG
-# GcMPBFoWFcmTCs/Mg9th+Z9SxGKy/48rF2VaZsbM94JhrES0rDTVmyzx+zSyEBwU
-# Z30vSc6wtTafvhrhjYy0LkFr5pRwQjAKmar5TXh3f0+TGg97OyKhggMgMIIDHAYJ
+# BgkqhkiG9w0BCQQxFgQUzCZ0w3OkxbcgTXgX5gZuzj/IuN4wDQYJKoZIhvcNAQEB
+# BQAEggIAt5Y3i++MmTOMfjHvZmhLopWrrykWrAnmVF78U8zgOAQnp3so0Oy170Fs
+# Nn7ipmGYCXHn0pk+qW31Yf7vGD/EeJiXfMUPHrbDVl4IXj3RDjO6RlvylRDetscZ
+# L1ztcVQHGkSE5DwZrhHCzJAdkP4JKYIkF1w6+1kDFEptwPNggYtN2w+navH7g87E
+# AXCnZj6gNaKs1Q9jIsrJb2QXLD4dGljVmJdiTR7YsGeDfmVh6P6VMH61xMdqRHp9
+# jsdz6i8oSF4HQf/tV1lNAdFJvtKTQbgAL4p1Lf1PyktUaVh1ZyLWHpv7bq+H5xOR
+# Xr96XIDkVSFGU6jmo0QBHVOBnsm6qxbHe5ZPIQ22jjKCNaAXebYRW/WOohRT5LQ1
+# YKoFBLW8Sxy4SzI3oefn/MRf3iMQGN4SZHG0yU9S8BjgXg4JtwIKYkmRZ55f2BU2
+# lPxm3hd/hgvYdzzs+vqMAbTGPIb636MikNJuoMSiDPiqzB8i0nBgcJfBNA6N1VF5
+# JsfdGGjiZ/U3Anzsq1r/wxuMLZ6h64WFsdmB/eQ00qi/ZoQQdBcVbrKmow/ugYOq
+# f1574fX4Jfx1HuOpIISFnk4Q71b4PljMQTYBr2ojAB7+6ruvh8Ckk5jFiEYpOcl5
+# 3df8L9CUyhdlXY+jR8BC11ol/EKRdXETaAcNfZYREuwpjiaaxfWhggMgMIIDHAYJ
 # KoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQswCQYDVQQGEwJVUzEXMBUGA1UEChMO
 # RGlnaUNlcnQsIEluYy4xOzA5BgNVBAMTMkRpZ2lDZXJ0IFRydXN0ZWQgRzQgUlNB
 # NDA5NiBTSEEyNTYgVGltZVN0YW1waW5nIENBAhAKekqInsmZQpAGYzhNhpedMA0G
 # CWCGSAFlAwQCAQUAoGkwGAYJKoZIhvcNAQkDMQsGCSqGSIb3DQEHATAcBgkqhkiG
-# 9w0BCQUxDxcNMjIwNTE3MTcwMDA0WjAvBgkqhkiG9w0BCQQxIgQgdh4qWevVPE61
-# 88B01a+5Nm0pAj6V+DbVfA4Cf1pHaAkwDQYJKoZIhvcNAQEBBQAEggIAOXNj+XB0
-# JY0ZGfPEjaQ12Sw6vnnEshHZd55Wzx0ST0E0AD4xnDXcfJMT4dZiqLMFOO9seA+O
-# QIINP4coYW/nzlFPRsJB9REycACmqTVfVQ9+IPgos+JDGZKE2yOgPPpLGwTf+IaY
-# oK1qa9jw2F5akP/wP8ryPn2RSFMUbc89pHIMl4k+1JxTkn8HvnZvqLYHlsdnfyMH
-# nK1MQgmzmojrQRVZKCxF8ZF60sEygnoVUCyn/KyRa+crVXQFsCgsZDiD9uhDpaX/
-# /ydBZTXLOnWpNlYQsU6gfvqyuGwbmuxu8pSmR5Dpi+JfdNiW8aHrhVS1hAgjRgCM
-# Zb6SGEDuW50JK74civyq6om8tH1UGPVjdsOBjrfkZFL9LkhtMn2ToQ6jSuBHyzsh
-# aMhMS+BuPokbi+Y8+9lzyYXa+sW+FRyShzb4WiucM8uqWuS9E17jJU26sATMZ6HQ
-# 0topYNsBSala/O4nJEcJhkqbNWH7pViltK7nK9hL0YzXm1en4CTuZe+JFhNjuA/a
-# ErCxIEL5ZNFGAhnBVf1M3lw/NoEWZkJYaJAbOlMrhEZK51UVSWN5t3RQLEbiqau7
-# zkr7q75bEQol1uhXGNlL+MQA3ngPj6HqOnidQBcldiUL+IXYXlHKPGWVpAQGDwLz
-# rN/jC68lnJq8Cw7bjmwu6RpLfDWAQ0S+AZw=
+# 9w0BCQUxDxcNMjIwNTE3MjAwMDA1WjAvBgkqhkiG9w0BCQQxIgQgaEaGFhlLWNaE
+# fcdJQs0vnf2+GMJP2IFglRZoTwl2QZYwDQYJKoZIhvcNAQEBBQAEggIArYXZbbpS
+# glGS5hMh13gsE7YiNCrOBwHL8Fpub1iZU0sr/dpH9BQgUuKo455NyUGRM849xXx/
+# 6YQFOJUZx0y17unpsYTJ5aD9FGHCp9A3RI8APVDuNnxrUF7JH3jufdYI5mxHocy1
+# /7u0IlzZlxDKpMGJeqR650lXYNYod/rTTsVMAY03KB+sUTP7JB4gF+h1b//pi7QO
+# hhgk1ir1NTyIMqybXT2UAua3lxvF9VSopvBaMosU/WJo8btXYTcBKg95oq1kFCnx
+# hGR9El/seiKBxLVH2Ln/1wKZE5h/D3m4+4J5DODzRRPJMO1l8qR7DqNQwdlm8VJ3
+# ibOqU/wYhUJJgpWdF5mL6Z65nInY5FKeSk7eXHf0CkvbygKhdJLEhBEGpNWM59kl
+# lb+eK9Oy+FEB6Q/Qm/jKSRfMzPRcuqdn/1VJdOUvzYr/JV2H4a7gSJOx0WEZAQ2W
+# YJ/J/1wSh+mNQVYcsxRjX2cdRI1zOqwDOnXxXh1M0rXLHQp1UiA9IPZ+09j8GG/F
+# LFd7KftP9qiuPtDVLEPZk1V5AZoP+d877iqLdXKxS8jdAuhhUMCpS5xWaQI+8FPV
+# CB6OxXh+xvLODQ8BsfRXs7GB77Byvxb8Ml1GYhhodit3N2PeCNB/hzQsi5JJ9fN5
+# OVN1nQmVworY/igVIZZ6GKGlbmCjeAGroEM=
 # SIG # End signature block
