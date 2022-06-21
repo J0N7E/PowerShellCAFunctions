@@ -73,7 +73,7 @@ function Set-CAExtension
         ########
 
         # https://docs.microsoft.com/en-us/windows/win32/api/certcli/nf-certcli-icertconfig-getconfig
-        enum CC_CONFIG
+        enum CERT_CONFIG
         {
             DEFAULT           = 0x0
             UIPICK            = 0x1
@@ -103,7 +103,7 @@ function Set-CAExtension
         # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/ne-certenroll-x509keyusageflags
         enum KEY_USAGE
         {
-            NO                 = 0
+            NONE               = 0
             DIGITAL_SIGNATURE  = 0x80
             NON_REPUDIATION    = 0x40
             KEY_ENCIPHERMENT   = 0x20
@@ -119,18 +119,37 @@ function Set-CAExtension
         # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/ne-certenroll-alternativenametype
         enum ALT_NAME
         {
-            UNKNOWN             = 0x0
-            OTHER_NAME          = 0x1
-            RFC822_NAME         = 0x2
-            DNS_NAME            = 0x3
-            X400_ADDRESS        = 0x4
-            DIRECTORY_NAME      = 0x5
-            EDI_PARTY_NAME      = 0x6
-            URL                 = 0x7
-            IP_ADDRESS          = 0x8
-            REGISTERED_ID       = 0x9
-            GUID                = 0x10
-            USER_PRINCIPLE_NAME = 0x11
+            #UNKNOWN            = 0
+            #OTHER_NAME         = 1
+            RFC822_NAME         = 2
+            DNS_NAME            = 3
+            #X400_ADDRESS       = 4
+            DIRECTORY_NAME      = 5
+            #EDI_PARTY_NAME     = 6
+            URL                 = 7
+            IP_ADDRESS          = 8
+            REGISTERED_ID       = 9
+            GUID                = 10
+            USER_PRINCIPLE_NAME = 11
+        }
+
+        # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/ne-certenroll-encodingtype
+        enum CRYPT_STRING
+        {
+            BASE64HEADER        = 0
+            BASE64              = 0x1
+            BINARY              = 0x2
+            BASE64REQUESTHEADER = 0x3
+            HEX                 = 0x4
+            HEXASCII            = 0x5
+            BASE64_ANY          = 0x6
+            ANY                 = 0x7
+            HEX_ANY             = 0x8
+            BASE64X509CRLHEADER = 0x9
+            HEXADDR             = 0xa
+            HEXASCIIADDR        = 0xb
+            HEXRAW              = 0xc
+            BASE64URI           = 0xd
         }
 
         ############
@@ -168,7 +187,7 @@ function Set-CAExtension
         {
             # Get config
             $CA = New-Object -ComObject CertificateAuthority.GetConfig
-            $Config = $CA.GetConfig([CC_CONFIG]::LOCAL)
+            $Config = $CA.GetConfig([CERT_CONFIG]::LOCAL)
 
             if (-not $Config)
             {
@@ -237,7 +256,19 @@ function Set-CAExtension
                     try
                     {
                         # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ialternativename-initializefromstring
-                        $AlternativeName.InitializeFromString([ALT_NAME]::$($Pair.Name), $Pair.Value)
+                        switch ($Pair.Name)
+                        {
+                            {$_ -in @('RFC822_NAME', 'DNS_NAME', 'URL', 'REGISTERED_ID', 'USER_PRINCIPLE_NAME')}
+                            {
+                                $AlternativeName.InitializeFromString([ALT_NAME]::$($Pair.Name), $Pair.Value)
+                            }
+
+                            {$_ -in @('DIRECTORY_NAME', 'IP_ADDRESS', 'GUID')}
+                            {
+                                # InitializeFromRawData
+                                throw [System.Management.Automation.PSNotImplementedException] "Not implemented."
+                            }
+                        }
                     }
                     catch [Exception]
                     {
@@ -283,8 +314,12 @@ function Set-CAExtension
 
                 try
                 {
-                    # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ialternativename-initializefromstring
-                    $AlternativeName.InitializeFromString([ALT_NAME]::OTHER_NAME, $StrongMappingSID)
+                    # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nn-certenroll-iobjectid
+                    $OID = New-Object -ComObject X509Enrollment.CObjectId
+                    $OID.InitializeFromValue('1.3.6.1.4.1.311.25.2.1')
+
+                    # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ialternativename-initializefromothername
+                    $AlternativeName.InitializeFromOtherName($OID, [CRYPT_STRING]::BASE64, [Convert]::ToBase64String([System.Text.Encoding]::Default.GetBytes($StrongMappingSID)), $true)
                 }
                 catch [Exception]
                 {
@@ -394,8 +429,8 @@ function Set-CAExtension
 # SIG # Begin signature block
 # MIIeuwYJKoZIhvcNAQcCoIIerDCCHqgCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU42GfKhXp6G51RpHhkdPZQCDf
-# DlWgghg8MIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUEidVvStI2R6zA5b5zSK+uQDK
+# IASgghg8MIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMTA2MDcxMjUwMzZaFw0yMzA2MDcx
 # MzAwMzNaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEAzdFz3tD9N0VebymwxbB7s+YMLFKK9LlPcOyyFbAoRnYKVuF7Q6Zi
@@ -527,33 +562,33 @@ function Set-CAExtension
 # t0RbtAgKh1pZBHYRoad3AhMcMYIF6TCCBeUCAQEwJDAQMQ4wDAYDVQQDDAVKME43
 # RQIQJTSMe3EEUZZAAWO1zNUfWTAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEK
 # MAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3
-# AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQU+fVca0MsyaiL5emC
-# B18VxRfuylowDQYJKoZIhvcNAQEBBQAEggIApjXE2jQGzzjVmxw8VaVHNn6kpNTW
-# z4GxnaryDtdNdQv7yIpK4GRVmcTH5F/jh/4Z+EGrkU6dJ/PNINyZvkf6Jvcf+IT3
-# 8fcc1ls6C/eYdE9mXRacweyEp9XDV2OmpukJ7s4kajCDTQDGNwyrVJE9NMMnUMRF
-# Nf17aRhefQo5bHbfuYhO67rUUgPrJ+tb74aUKZy0RDHXahLcD6k1i2m6gDqxQNrA
-# UG92CWL/awAU1TZY8Iz8ctFDqtC4wRSUZCj2MO2v3b10kHk779/T1im3SR4e/d2q
-# b7+czQl66aVckChv8z4JbrhMxYKEMiK4le6uHHAGZX5YM4MsruuQnSFAG2zWQXlr
-# Yi9y0yyC7Fb8JE8j3qAHv9YY1RREAHNeX1eCrlfsOSQnICJXdkMG9+kkzG63jFvv
-# WMSaV56xZi29fqlFWBe+cUnS9/C93dFKnTc+c6wtoLbbHbdOXRQMP5ngXzk2mKyN
-# 8zVPmVpgM0Hvv6BrrUg11AmocyRvSjEFbcqG9EtwrgALwY9ndAyj0M+YhGF6HRl8
-# Pim4xBAumwjBk9AKr+hMSGPcgt+00XBB+LsQ6l7z6Vh0KUE8DQh9cQhJcnnpBA+q
-# 11i8/bvLeOQaUuuwXGPJ8jfiH6OYB9QIeBB9DFHcyYzMyVq/XQMWZzzmU9UQxgQ+
-# pC4nnrS3OHNbZmWhggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQsw
+# AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUTW2koGLe/HuInbNI
+# aXKVRU/OItYwDQYJKoZIhvcNAQEBBQAEggIAGTTvIoGugSVPvc98CxVSIGCegXwo
+# M97z9aMZnvaSbPd/ODYQ3AJjVnkFonOpq9VbKXwC0aZOlsR/SWUqBwDfGZeKTdmk
+# +0R4vNTm0WcLRwXFDPSTWm+draSfohvLi+ArYfbwqhUFz4UpowlNU3i0SwHpTlck
+# zKyHohSCxbLHRhoSwutaesCOAHACSQP3Izr6opWWVIvubqrZBQC7pEaxS4gxfVp9
+# zqCv8TMpVS2pHy//hnfZkJRzpB1/cY03qOqNAb55k6tqxOHLKBH/q6XLaCljtI6h
+# xMD0vroj2qhyUuoltYruLo7BBoPKCwtwQ7EMkRIzAeM7HXfqOYoL79WwitBBPA1N
+# Odm0JPS4spG5YvsaPGBpSyTsEWgFhjdGJC1CRsnAQBFz70qoU2YwJLNcWojdML+U
+# r2WZaGJ39co/KlUeu+hRG9jVbjmlQeIn4XTKGS/V0VWlak6RHEAenOWpD3G3Db5j
+# ZaR1cf+bQVF9YbvhUfCTHqYHq95rwaMuzG6puoU72nCDlLpPxVS6iEmdoT4VgDqS
+# YQCqP6I6vDDyK6DOOYPlZ9HHI+QXd6+rk+Wgf183/W3LEL50ZRV+KGRwHa2PFZ4D
+# LbJKwtlwUeP7G00uM5nnlXL4sPBEJtFeugeFbg6MpZe0bgxqIT3lfGGk1XI4QFR2
+# uWNYFdkowbtDnxahggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQsw
 # CQYDVQQGEwJVUzEXMBUGA1UEChMORGlnaUNlcnQsIEluYy4xOzA5BgNVBAMTMkRp
 # Z2lDZXJ0IFRydXN0ZWQgRzQgUlNBNDA5NiBTSEEyNTYgVGltZVN0YW1waW5nIENB
 # AhAKekqInsmZQpAGYzhNhpedMA0GCWCGSAFlAwQCAQUAoGkwGAYJKoZIhvcNAQkD
-# MQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNjIxMjMwMDA3WjAvBgkq
-# hkiG9w0BCQQxIgQgJbLa5OTddxb07pLijl6/QSYjuGh4exrZypEMJwJeup8wDQYJ
-# KoZIhvcNAQEBBQAEggIAY/YwgnUzkWXaV4Ug57nwIxwq3VmqR6fVzhC5dI3aNm57
-# HRZEqJ8el4jikMnUb4KiISe7dLiwKFCvsnX2in2vQltBMGoWAkCuxclCSqAx1cG8
-# 4fjFrmO727um31yUmmffsfsFijLPGVw8v1OrW2xA2QMrhPfnLpEFLYLyx79L5UC9
-# K4BrwcA7P2Nx5K5E06+wCEQsAPVHNQhksGJ2qLsIpTwk2ng4pTaXq9sa9wMO43qo
-# WK9yr3SpnUqHTQgYS1JBsgb2mAiwn3ILfLrNMdeRta6rRja6Evx/JRebaGgG2QyL
-# otQGFsGrBpCFT/Jn8Wx3hult6ihcVBHzTe3XqJrl/JAmLxMs/KfckDoq72in2mTH
-# IvWBGHgPQD9xNAq/4L2quqpw3UBNTSqRN0hWWJ5y6ig9MOvKm6GEdM7yarMgk2Un
-# diOFGfOqaaffc2XLW/+607CZwoDxsebUhM1vcGcDV+jpPSka0UfaGMkNujMThmfS
-# 5tfmQf9wyKz3tD5rRgTV5enEXadOrYg7O+or32lQiPth1Hog2aFLzACEvfiExyfl
-# M+RaAsdaWzCPvE+19HFQJOBTLc+hacfQ4znMJw+0EO5ryFXvAx1M3POSuBBJEP/m
-# hbMEn60mwNVxa6ERYZab6QF/4+JmnOxDaxcknTIRMuY2rsmuWGLchDU55cmU4W4=
+# MQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNjIxMjM0ODAyWjAvBgkq
+# hkiG9w0BCQQxIgQg7O3PJtVsMBPDlEZCuOWmw5rTy5wVFGe5K3dPahMrGggwDQYJ
+# KoZIhvcNAQEBBQAEggIAs00T9rh6CBL/ZtFH1Eju0iYLvnbNeWYqfFjsMCFnX2rn
+# MMmrxYaCQeuaI+5/7W7/Q/Vz0FUxhD0W1/5A5zbS+RQ5MNY/TR2zTB9wIJM0Xk2O
+# UGqpW4CiNO9HyK8Kc5xmpiEz81iRq2Uwi/nfk7UjPlwycRxk4rpdx7PbXJTq2yj7
+# mSbuM/lIzeu9pgAwdWUFyu9wszf7npJXtG3sytXksQJ1EcDUiH4a/UDVKi76XnXt
+# x6WO+HvtxY4fFpgP7oz8dHp6vweJeFs+lYFvU05WrMMp+5kzvFB4f+Wxn7kBBcW9
+# 8FxYgQgSBarE3WAUg8p+aeOGg9Uf/96wHtHxOYS9LIdJqYwt0eJfvwOOkXUtoh9D
+# 6I+wqefFR18Z3cJnTsyl1r9nrDQUFkcOfBs7kgRXXaJg4vM3Q6NIyyFDerVaRdq+
+# i+hdHY3HTv0j6X+osVZ7qJtgeBekLwiCZPPgvbKQberUvRuT3I4aE7ipeNnnJmd2
+# HPY2UET8EwHwfaNqfB9pTh+Wa8tgqgzA7xiou37iHgs7hRklgXYw8mZ2d/O1PCrf
+# ZuhrPFwLm/eRhrg2FDrLakEH0aItH6Yvx7U8wnPgtXFg59kpEnguyu/HGRy/4BmQ
+# QxqVeAFcCR2i8ib6aH15B733FlwFqDYrDtlQaimUZjQ/10j6VfDhvQM5bVlgl9s=
 # SIG # End signature block
