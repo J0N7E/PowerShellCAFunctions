@@ -326,7 +326,37 @@ function Set-CAExtension
 
             if ($EnhancedKeyUsage -and $EnhancedKeyUsage.Count -gt 0)
             {
+                # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nn-certenroll-iobjectids
+                $ObjectIds = New-Object -ComObject X509Enrollment.CObjectIds
 
+                foreach ($Flag in $EnhancedKeyUsage)
+                {
+                    # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nn-certenroll-iobjectid
+                    $ObjectId = New-Object -ComObject X509Enrollment.CObjectId
+                    $ObjectId.InitializeFromValue("$([EnumUtils]::stringValueOf([ENHANCED_KEY_USAGE]::$Flag))")
+
+                    $ObjectIds.Add($ObjectId)
+                }
+
+                # Create extension object
+                $X509Ext = New-Object -ComObject X509Enrollment.CX509ExtensionEnhancedKeyUsage
+
+                # Initialize
+                # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ix509extensionenhancedkeyusage-initializeencode
+                $X509Ext.InitializeEncode($ObjectIds)
+
+                # Add to extensions
+                $Extensions +=
+                (@{
+                    'strExtensionName' = '2.5.29.37'
+                    'Type' = [PROPTYPE]::BINARY
+                    'Flags' = [POLICY]::CRITICAL
+                    'pvarValue' = (
+                        ConvertTo-DERstring -Bytes (
+                            [Convert]::FromBase64String($X509Ext.RawData(1))
+                        )
+                    )
+                })
             }
 
             ############################
@@ -526,8 +556,8 @@ function Set-CAExtension
 # SIG # Begin signature block
 # MIIeuwYJKoZIhvcNAQcCoIIerDCCHqgCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUubLDTQfCldwiAuXu5ftgfofG
-# K6ugghg8MIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUPrrFf+KUmxkIYx8WyxcVJRhv
+# Pfugghg8MIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMTA2MDcxMjUwMzZaFw0yMzA2MDcx
 # MzAwMzNaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEAzdFz3tD9N0VebymwxbB7s+YMLFKK9LlPcOyyFbAoRnYKVuF7Q6Zi
@@ -659,33 +689,33 @@ function Set-CAExtension
 # t0RbtAgKh1pZBHYRoad3AhMcMYIF6TCCBeUCAQEwJDAQMQ4wDAYDVQQDDAVKME43
 # RQIQJTSMe3EEUZZAAWO1zNUfWTAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEK
 # MAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3
-# AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUMnzVC3yZDlPaIglr
-# kiR1oORy/4IwDQYJKoZIhvcNAQEBBQAEggIAQT0DLSYqw8uC4xFFXDzw7uqfVthb
-# r85kO2HNt67M6qb1Q5bAs0yGmaaTi5pqvssxehwHfMUZwP/Dax+s4HDXqh5jAOEd
-# x3eYVGRi5u3cx8kRfQ/y6P/IpvQsVqEg/izZ2WyEgUs5b/eut+czelAYz6I9425N
-# n6F+2up8qv2Tah6HN3blazMzVvciRvcVMoc1DJFHJS5mZlpTzPZi6SFFuGUSeoUZ
-# QCPVc0QZBg5bwTa4KHnZUeYpGGLbtSoQnn88wlTHBXugSWyQEULwNy77a64lev5B
-# /B6+obdGkJG13XVgOFFjr7TzQk7nHtkAf0fEBDow7k/wQeeceeewe30iNLLX5Z5V
-# zDHISPo0aAyJqe8iiuRUH9PVkxAmUxHTAWca9BaWG5ZnuiUwD5b/rCSI67D+ZE7n
-# d1BjK8YDr7rXC5qB1jV9wdMPFmet7jlLKOrQe/le2rB7cA15UBFKTB6pjE16c1h2
-# 8RyX0Z9ZATdX7iufzvfIGpJE8lnOVWQLavfLKAABEtGpM1e/YKDXviOnxqIEf4B3
-# 4lbKig7nhc8Gp1vB5Aue/kqRbLQnDpajDBCU/vyEGSxpdaFF6Q1JlTFMvJBFntqv
-# eKKNueqtHsHwj7kKaDbr1x3K2GfT0juKaAc/CGzhdBUrB+tuaORpblFQWZu4TyPR
-# 9Pl4sSZjdCqmFMChggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQsw
+# AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUyfJGCNwgush4SlQm
+# 5VQOD4p3ZYYwDQYJKoZIhvcNAQEBBQAEggIAEXLvK+wcimoTwaSUO2+ppI84MIlK
+# XSEJN/BNu/9QzRCGyEx9/sW8Ft/gxSoHEM6Kpp84eAa90KEVr+MG/jIf+4Wh0gGH
+# 8TxCOY2o/HSlDST1eFX9fx13qpq3jLITv08Sss2broDNHTR2UeLra2FMHjXcw50O
+# +PkSMklBzPYyBNjKMWVX+f3JcOtsWput2EfrJVQ9/CEecfh3hUFEh3vZts6MyeAL
+# BB4s93oqdAkh5o1LzvkoPhRFnGAaIUep/hms4mdLVAiWMs8EjZdGISIXFUvZZIi/
+# L6XDg+WL4nfuJVSt0zCXX1Gqya8vqz2+3WSsjafDT+opo6g5YAwlx9XOkTupwXq1
+# 3E8qv/njF30WJRNp6ZzQaDWl0A22er2HYZVvrpZHrOF8zVIoDyKAncNjz6yK3EX2
+# uUnPvGNV3Ru8d1AAdPjFQorhs3JASbCGDhVPilgpE33OEk+vuz/IsLzzrGH3I0SY
+# 8/Zh13MWaxPTv7a2roM+rKH87KgJ8z8SB/An/atGumS8kBqMuADRyJT8C7Lu+0EX
+# 7yVrdXvfPy5xgloF2EJ+H+MfNntbFnB7G526McPnxRK+hx2VQosQLjnDdK87YMkA
+# 0ObCkOKHk8dUm1R7AfBlBK5dkUoE4rNZW0P9LkInzGpm2PWvXdKakj5pVcqAH5px
+# QhNrWgK03CYkTyahggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQsw
 # CQYDVQQGEwJVUzEXMBUGA1UEChMORGlnaUNlcnQsIEluYy4xOzA5BgNVBAMTMkRp
 # Z2lDZXJ0IFRydXN0ZWQgRzQgUlNBNDA5NiBTSEEyNTYgVGltZVN0YW1waW5nIENB
 # AhAKekqInsmZQpAGYzhNhpedMA0GCWCGSAFlAwQCAQUAoGkwGAYJKoZIhvcNAQkD
-# MQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNjIyMDgwMDAxWjAvBgkq
-# hkiG9w0BCQQxIgQgTDa+gpHJDgfApC2fspiEKDOe4TKYH49iND2kkp+LJSQwDQYJ
-# KoZIhvcNAQEBBQAEggIAIcvQWMyXrJQHqikC47jGzkbReJz8CMmKeuZmQWm5Sr8c
-# YimBVZojDvncEYSHPEMVSPXLj5ESnYkHCAEiX8PpMj+YKIODdOlcxhZ9PWUKEz5i
-# twa8ZgHpAUh3cmn5M4e99O44q8OqtBc3pW9HL9Av8NeIsMv37GqMgTA0EPgRSrz/
-# 9EioZiF89IkYcbcZc1ib1s/A6Tvm3azi/ajU6TrvmXMuOVsyr5gPDOj3vNL70XTg
-# 7gTlDfNhxVkWT003Dtp1CEqf8wGqfw+uwTmhqLeDMMJ2L2VzsfDh12O80sNr8Qq3
-# gUJugnG3fWmcJce75jzEsVTNEASg6hpQrlDfLKfl3yAl1I7+94Mt6bRMQAlphPdo
-# M3xGOimWgsZRkYvQtbukypm8GeSgykvIbd6y7FAuK3xpsXAzmXVqz3WAfOxuv4L8
-# /eLmtW+M1g6r8Vkutui5G8jToFmIE58a44tpfFJMyBOYzNxUeNqfAB26zU1Jh5z+
-# +s9Mb5TUIl51w5j1Q3lWavVi5Z8DPbu0sL6twA5/ogMM+mMI2slvLNQjOdRbPmAZ
-# p21ENQ7seJA4OruNMjPC8FBdtecT9JceUUqviqhq4S13bZT1xbrVi8gnYs+tKNht
-# ASC8RvlucsNbW03Lg54lMYO51yWJlj2N/V8yvBgnODjXfTxVBAHT0tip+DDuS00=
+# MQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNjIyMDkwMDAzWjAvBgkq
+# hkiG9w0BCQQxIgQglfS9GTryNsQnJmTxy0FK1SJaY5r7SlRS4VA7oO34migwDQYJ
+# KoZIhvcNAQEBBQAEggIAohQu90usxKWv/K/FqlGN/oMUv5RoQEbh+SwINk8yWOro
+# 9+yJk4l8bqw37O4+QdYk5lSiyfW2Z1HYryou0gjYgvlzCgaE4YjhTLTjjJ7FLwp5
+# S97gU+edD/k+u++plXFd4EIscdafacOrXll2PK/RimOizz3ma0J9cnf4C1oNmrcE
+# KpBsWRv7oTSeIkVTfgWj4pVTa8Ly6Uc5mK3v2fYOeeeAYSsIxYuoCHMD86DRUbDb
+# 0czeR1YtILJKYv21wdMSzOvFyiDEvGUD9cT7+4TQhpjB76yAROvsO0tWpBDWkBt1
+# D9BLbi73ac6huX0DdM0C3UPXLCSt9OtTgeN6jwTEqrnOEhVwO6ZvWTsEPsLQjEEc
+# By1Lptae/zarLhUqcWap17Er9kgRpVQyoXEo94nEmMs/gG0AmnzIICBUQ51P7+A6
+# bfSKhWkOlQLXy4n5vWFawG/mfcSNwZbSaDNd08GsMJO9m2SqvXm4R6OAzSwd868b
+# /CGd6ztbDgpH7Hw7zRvlL68R83fxc43mSHJ9MITwlWI7cs/IR0CggO02JIU7TWXX
+# HMf76hizTARrbjZKmqPoju6Cn/ICBbhIH2KdV+GxYZFIh0JceWB253DKl44715Dw
+# 7TMbi1NOKf4fu+oLaod7x71OA0ZKXFdYs0GSAAt1yZkCZl0AS4scVDp9nyopuL0=
 # SIG # End signature block
