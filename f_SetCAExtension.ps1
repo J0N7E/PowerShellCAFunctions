@@ -462,9 +462,6 @@ function Set-CAExtension
 
             if ($SubjectAlternativeNames -and $SubjectAlternativeNames.Count -gt 0)
             {
-                # Create extension object
-                $X509Ext = New-Object -ComObject X509Enrollment.CX509ExtensionAlternativeNames
-
                 # Create alternative name collection
                 $AlternativeNames = New-Object -ComObject X509Enrollment.CAlternativeNames
 
@@ -499,6 +496,9 @@ function Set-CAExtension
                     $AlternativeNames.Add($AlternativeName)
                 }
 
+                # Create extension object
+                $X509Ext = New-Object -ComObject X509Enrollment.CX509ExtensionAlternativeNames
+
                 # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ix509extensionalternativenames-initializeencode
                 $X509Ext.InitializeEncode($AlternativeNames)
 
@@ -523,9 +523,6 @@ function Set-CAExtension
 
             if ($StrongMappingSID)
             {
-                # Create extension object
-                $X509Ext = New-Object -ComObject X509Enrollment.CX509ExtensionAlternativeNames
-
                 # Create alternative name collection
                 $AlternativeNames = New-Object -ComObject X509Enrollment.CAlternativeNames
 
@@ -548,6 +545,9 @@ function Set-CAExtension
 
                 # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ialternativenames-add
                 $AlternativeNames.Add($AlternativeName)
+
+                # Create extension object
+                $X509Ext = New-Object -ComObject X509Enrollment.CX509ExtensionAlternativeNames
 
                 # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ix509extensionalternativenames-initializeencode
                 $X509Ext.InitializeEncode($AlternativeNames)
@@ -604,15 +604,15 @@ function Set-CAExtension
 
     End
     {
-        Remove-Variable -Name CaAdmin, X509*, AlternativeName* -ErrorAction SilentlyContinue
+        Remove-Variable -Name CaAdmin, X509Ext -ErrorAction SilentlyContinue
     }
 }
 
 # SIG # Begin signature block
 # MIIeuwYJKoZIhvcNAQcCoIIerDCCHqgCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU74xclBO8nvqpGLktU193qY0t
-# Qyagghg8MIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUedUyEr+kNjphb1FV3qiS3Hy6
+# la+gghg8MIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMTA2MDcxMjUwMzZaFw0yMzA2MDcx
 # MzAwMzNaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEAzdFz3tD9N0VebymwxbB7s+YMLFKK9LlPcOyyFbAoRnYKVuF7Q6Zi
@@ -744,33 +744,33 @@ function Set-CAExtension
 # t0RbtAgKh1pZBHYRoad3AhMcMYIF6TCCBeUCAQEwJDAQMQ4wDAYDVQQDDAVKME43
 # RQIQJTSMe3EEUZZAAWO1zNUfWTAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEK
 # MAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3
-# AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUU3S6/mEnzTQEzm0i
-# HoG7HsjTk9kwDQYJKoZIhvcNAQEBBQAEggIAo5oElkcEvD/V6vZiSz+fANPEVOnX
-# DaeMZwkgGVGxYEF+I3H6DZFZIqgdu0y0SPzVldEsH99N7tn0hAgd/2mF/pjTtMwv
-# oRBFcXK6dbQgW30cE3rSf1q6jOYQMK9/QZB2FBzqMDMCEf2mGiXsr8u5ci6BaWJ2
-# Zvj7p60Qq3Ne7IEDY5oBWniPyFOxqcDhs/CkPVCr1+27DnhMyIfe/ZVHjASODIC4
-# pO+0OC8Med9hCr5DWZrv1oA7AaS/PTi9wZkn1jFjQCGpjDHHta4dbEwOkeFiJp6C
-# KhjVmBZb5qFgXHUkJSwHxzkpKyMH60+ghZDl16z22u+2d2OMTTrslvrLky2h3wl3
-# 5peySufCzq/IfyTUPNxr3ixLphUwwN9AHbnb7JGtOLIEtssuLBT5nYMfw4Fd5PGZ
-# 9ioKm4BdpEMlnaEH6MXboXvhUYzKXmQ3S2DMiiA5p9H46ZBsYiE9mpnsCWq+ORdH
-# x9o/X5KwvpLphmcjLh55ageGbZyxk1EitNS5E1nd9OE4D6hvMk2oI+jHaiKFTgMr
-# NtRT9bQyEdjfcflrXagwSEOTzw66IZuOpI6IA9lwkXIAmXDxr7SrxJoZtDug9qAF
-# K1yANPIg+UPSNZyBVJIWz6is4E2ddoVncxLu9ZE55fx6bMIqTmNSfKK/dVOPciRC
-# 8/5go95jV2iSMX+hggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQsw
+# AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUWpD8iPGnEwNdM4UH
+# gHJBJw8xzm8wDQYJKoZIhvcNAQEBBQAEggIAE9bXMEn1WPRTSi1O8RhUP9qYGnZM
+# jEM2vtHP/IdQ2HzonC0MBwRFGk7bAEtptV0e54l5GFcsAJ6JBNv/OYgigaUzxqfZ
+# uZa9wEn3Y3MWw+7gKpXKdYzW1oKHRx3k1yO/S6DZNritw4iL8kM+BlqgWscL2lVw
+# JW+vVBrjkL7TH4bgT0S/7lsFc9YQzDTrV+Z2F9uY8oYazyNFIfLU3bwZIPQPwcP1
+# q/9/VM8oS/VPzIdX9bOWlqCiVj37IK07WsC7ET6bgnuB44sjI85h3QXtujIBu299
+# UaX7eDDlcsSPZjE/je0woarubIxbuXIAMa7Q/hgcBXp0Yo/57WUV6z6w6tFpjS4V
+# magcaCnAQBSOfN+Tiu63GQEa6j1p/vhVzaJFJWp+TwRVXbiNAEfp7gE2KaQBuf8l
+# nriRjUBPJTfvuy0uAgnj+r7383+JWnxml2gNbMQDSTUqWugjYcYiRxIgcl/GEnoD
+# smnAHlgiGwIuLroEe0B4vDs/hx6s2Jz7hMeldvK1WoC5ujxm/Po1ssSzZrzM5pxM
+# ApAWKY64RO8MNsi7T3X8qmsELi2BPazHYUcWSNpMGtsAtaZo1lJ0TSc8NMiZvM7n
+# A9pPy/3sWLaOZ0X91Fr4VXAX1MyvIXaJtGc+NsuTTfNa++9NsBdEsZc/5IJQKtKu
+# pl6U7B/cth4GSN2hggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQsw
 # CQYDVQQGEwJVUzEXMBUGA1UEChMORGlnaUNlcnQsIEluYy4xOzA5BgNVBAMTMkRp
 # Z2lDZXJ0IFRydXN0ZWQgRzQgUlNBNDA5NiBTSEEyNTYgVGltZVN0YW1waW5nIENB
 # AhAKekqInsmZQpAGYzhNhpedMA0GCWCGSAFlAwQCAQUAoGkwGAYJKoZIhvcNAQkD
-# MQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNjIyMTIwMDAyWjAvBgkq
-# hkiG9w0BCQQxIgQgyfYy/ZYLqPbxjfmFoNsGqeozNq6J4Pjpslttv9+JGw8wDQYJ
-# KoZIhvcNAQEBBQAEggIACyti+BTQgTdib6lO9yOoB54y7m3bwE4Us+JHAjZFeprG
-# k4ATllCu4UY49zaRfuImQUthGJc7bBdzUZBLvjS61tcqQnuHEUV+JHlobKnW1N2A
-# EOmytuK5BKreSRJG/9vThkRR64jYac1o6YNPVzei9+zz4ai7zmKRgNNjdecbU9Op
-# V89u6kGsXul5u9QtjjiNZF7EdC/RqiTfZJUeurQS+kHbrrXcjabc+8J+LBL6xRig
-# V0Ni4m3fjvaI1Ho8E7BCzOiGAHlf3eYYd7AKXODDNDaLHkMbHlJ5YvvdbkpBue4L
-# RolWjXycFsZVlWOfz9cNw3KPExgzSzkF0Rkwwop89iIbRztZqREEjPnaNZFlC+aB
-# EKgXBizSwH9o7KbudGKfO72kC5XHnC7DpmEi8hKDxo/d1t+NhNIpo+EVqegLl8Za
-# Dyu3eOR0olVMDHuMVL59fzGdlZzMlZFuw0w+0BgZK1hfpWTvVI1AQ+DfouNbKtVL
-# v4s/F+sOGSkuYpCKY9NGKEFflr3FI0a98CizmqpHgpI3q+SAwEiDQib6J35KPvi+
-# P/Z54f9/3FP4mFuW8QkQBYcH9XqDUtv1iGITa3JSCdjU3VO29QCWgJTzs7bEAyof
-# ogoqMoWcLaaugu8ceGmmy7GqVE+M9Egm3deBFzFdSZjaFYr8wChTiJVoDv1Rmfs=
+# MQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNjIyMTQwMDAyWjAvBgkq
+# hkiG9w0BCQQxIgQgPz/ANfbeKiJ86vAbHq/XMYFDDBVTBIKB/Awcef9Lz0MwDQYJ
+# KoZIhvcNAQEBBQAEggIAlVhRy/eIV4t0eDUj7+K+mCEyxwPxrBlIWaeLdSDjT/EP
+# Tcvxh8yYZVA2BY//XypJzf+4JWY5UriruS2LDRSwYMmqViT0jJHPDsfF9faWX9Xu
+# N8HR9MT4gskkmiTAGV15BUNHqWFvCnRjkzg3avfkBMdNijrqPSQZbz0M3zg/L+Gu
+# NskEkhOS/KAYaXcGiGMXw3ihAZv6C/DsHsBtGkHINf1DH1J0T2MoF8QXxa+YSFX1
+# RTJ1jBRwVTMbTRWPgC97tTJoX+ZUfMTH7vzRGLqJ7YsvYDXmw6/QKSpszUKD5kwv
+# sbZNfayVVpOaFsjWZ/3AnL2FYKOUp5SfkJTaFiaoV00ivTjtN/r4VSqAvFBRN6TF
+# cLCLt3QWZDZaCaX6FiOMIgIWM6rHkRtDvqxNUhs4cHpcuDsuOWRQr/mhElEUEOeP
+# 4Tg5vBJMcCibM7JD0ViKH+2OfaSf9rsX9+CSz2M0jcqhDZdgdEdUK+mtFUOdAwnj
+# pmqm7vADwHmd94fKXWRA7yMkRBACrVIrFvPGhR0avoTrjIui7CWZ5m8fzFn+U3/w
+# fqqTXPHdVgAeqFttyLYgOqbEzNiFL9zhk8QmGci8ZkbXHee8mqvCyYjO6n9ApfRE
+# GBMnJM6op9eU1E3Yn7m+w+Gm3+1o9hULvXFovoTs9FKkhhhOljoX6pmYXQzMTPE=
 # SIG # End signature block
