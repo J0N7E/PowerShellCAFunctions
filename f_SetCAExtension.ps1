@@ -21,6 +21,9 @@
     Set Basic Constraint Subject Type = CA and Path Length = None
     Set-CAExtension -RequestId <ID> -SubjectType CA -PathLength -1
 
+    Set strong certificate mapping OID (1.3.6.1.4.1.311.25.2) to specified SID
+    Set-CAExtension -RequestId <ID> -StrongMappingSID <SID>
+
  .NOTES
     Debug:
     [Convert]::FromBase64String($X509Ext.RawData(1))
@@ -41,11 +44,11 @@ function Set-CAExtension
         [Parameter(ParameterSetName='Set', Mandatory=$true)]
         [String]$RequestId,
 
-        [Parameter(ParameterSetName='Set')]
-        [Array]$KeyUsage,
-
         [Parameter(ParameterSetName='GetKeyUsage')]
         [Switch]$GetKeyUsage,
+
+        [Parameter(ParameterSetName='Set')]
+        [Array]$KeyUsage,
 
         [Parameter(ParameterSetName='Set')]
         [ValidateSet('CA', 'EndEntity')]
@@ -54,14 +57,20 @@ function Set-CAExtension
         [Parameter(ParameterSetName='Set')]
         [String]$PathLength,
 
+        [Parameter(ParameterSetName='GetAltName')]
+        [Switch]$GetAltName,
+
         [Parameter(ParameterSetName='Set')]
         [Hashtable]$SubjectAlternativeNames,
 
         [Parameter(ParameterSetName='Set')]
         [String]$StrongMappingSID,
 
-        [Parameter(ParameterSetName='GetAltName')]
-        [Switch]$GetAltName,
+        [Parameter(ParameterSetName='GetEKU')]
+        [Switch]$GetEKU,
+
+        [Parameter(ParameterSetName='Set')]
+        [Array]$EnhancedKeyUsage,
 
         [String]$Config
     )
@@ -115,6 +124,81 @@ function Set-CAExtension
             ENCIPHER_ONLY      = 0x1
             DECIPHER_ONLY      = 0x8000
         }
+
+        # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nn-certenroll-ix509extensionenhancedkeyusage
+        Add-Type -TypeDefinition @"
+        using System;
+        using System.Reflection;
+        using System.ComponentModel;
+
+        public enum ENHANCED_KEY_USAGE
+        {
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.12.1")]ANY_APPLICATION_POLICY,
+            [DescriptionAttribute("1.3.6.1.4.1.311.20.1")]AUTO_ENROLL_CTL_USAGE,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.5.1")]DRM,
+            [DescriptionAttribute("1.3.6.1.4.1.311.21.19")]DS_EMAIL_REPLICATION,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.3.4")]EFS_RECOVERY,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.3.8")]EMBEDDED_NT_CRYPTO,
+            [DescriptionAttribute("1.3.6.1.4.1.311.20.2.1")]ENROLLMENT_AGENT,
+            [DescriptionAttribute("1.3.6.1.5.5.8.2.2")]IPSEC_KP_IKE_INTERMEDIATE,
+            [DescriptionAttribute("1.3.6.1.4.1.311.21.5")]KP_CA_EXCHANGE,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.3.1")]KP_CTL_USAGE_SIGNING,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.3.12")]KP_DOCUMENT_SIGNING,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.3.4")]KP_EFS,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.3.11")]KP_KEY_RECOVERY,
+            [DescriptionAttribute("1.3.6.1.4.1.311.21.6")]KP_KEY_RECOVERY_AGENT,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.3.13")]KP_LIFETIME_SIGNING,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.3.10")]KP_QUALIFIED_SUBORDINATION,
+            [DescriptionAttribute("1.3.6.1.4.1.311.20.2.2")]KP_SMARTCARD_LOGON,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.3.2")]KP_TIME_STAMP_SIGNING,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.6.2")]LICENSE_SERVER,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.6.1")]LICENSES,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.3.7")]NT5_CRYPTO,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.3.7")]OEM_WHQL_CRYPTO,
+            [DescriptionAttribute("1.3.6.1.5.5.7.3.2")]PKIX_KP_CLIENT_AUTH,
+            [DescriptionAttribute("1.3.6.1.5.5.7.3.3")]PKIX_KP_CODE_SIGNING,
+            [DescriptionAttribute("1.3.6.1.5.5.7.3.4")]PKIX_KP_EMAIL_PROTECTION,
+            [DescriptionAttribute("1.3.6.1.5.5.7.3.5")]PKIX_KP_IPSEC_END_SYSTEM,
+            [DescriptionAttribute("1.3.6.1.5.5.7.3.6")]PKIX_KP_IPSEC_TUNNEL,
+            [DescriptionAttribute("1.3.6.1.5.5.7.3.7")]PKIX_KP_IPSEC_USER,
+            [DescriptionAttribute("1.3.6.1.5.5.7.3.9")]PKIX_KP_OCSP_SIGNING,
+            [DescriptionAttribute("1.3.6.1.5.5.7.3.1")]PKIX_KP_SERVER_AUTH,
+            [DescriptionAttribute("1.3.6.1.5.5.7.3.8")]PKIX_KP_TIMESTAMP_SIGNING,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.3.9")]ROOT_LIST_SIGNER,
+            [DescriptionAttribute("1.3.6.1.4.1.311.10.3.5")]WHQL_CRYPTO
+        }
+
+        public class EnumUtils
+        {
+            public static string stringValueOf(Enum value)
+            {
+                FieldInfo fi = value.GetType().GetField(value.ToString());
+                DescriptionAttribute[] attributes = (DescriptionAttribute[]) fi.GetCustomAttributes( typeof(DescriptionAttribute), false);
+                if (attributes.Length > 0)
+                {
+                    return attributes[0].Description;
+                }
+                else
+                {
+                    return value.ToString();
+                }
+            }
+
+            public static object enumValueOf(string value, Type enumType)
+            {
+                string[] names = Enum.GetNames(enumType);
+                foreach (string name in names)
+                {
+                    if (stringValueOf((Enum)Enum.Parse(enumType, name)).Equals(value))
+                    {
+                        return Enum.Parse(enumType, name);
+                    }
+                }
+
+                throw new ArgumentException("The string is not a description or value of the specified enum.");
+            }
+        }
+"@
 
         # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/ne-certenroll-alternativenametype
         enum ALT_NAME
@@ -233,6 +317,16 @@ function Set-CAExtension
                         )
                     )
                 })
+            }
+
+            #####################
+            # Enhanced Key usage
+            # 2.5.29.37
+            #####################
+
+            if ($EnhancedKeyUsage -and $EnhancedKeyUsage.Count -gt 0)
+            {
+
             }
 
             ############################
@@ -417,6 +511,10 @@ function Set-CAExtension
         {
             Write-Output -InputObject ([ALT_NAME])
         }
+        elseif ($GetEKU.IsPresent)
+        {
+            Write-Output -InputObject ([ENHANCED_KEY_USAGE])
+        }
     }
 
     End
@@ -425,12 +523,11 @@ function Set-CAExtension
     }
 }
 
-
 # SIG # Begin signature block
 # MIIeuwYJKoZIhvcNAQcCoIIerDCCHqgCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUEidVvStI2R6zA5b5zSK+uQDK
-# IASgghg8MIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUubLDTQfCldwiAuXu5ftgfofG
+# K6ugghg8MIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMTA2MDcxMjUwMzZaFw0yMzA2MDcx
 # MzAwMzNaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEAzdFz3tD9N0VebymwxbB7s+YMLFKK9LlPcOyyFbAoRnYKVuF7Q6Zi
@@ -562,33 +659,33 @@ function Set-CAExtension
 # t0RbtAgKh1pZBHYRoad3AhMcMYIF6TCCBeUCAQEwJDAQMQ4wDAYDVQQDDAVKME43
 # RQIQJTSMe3EEUZZAAWO1zNUfWTAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEK
 # MAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3
-# AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUTW2koGLe/HuInbNI
-# aXKVRU/OItYwDQYJKoZIhvcNAQEBBQAEggIAGTTvIoGugSVPvc98CxVSIGCegXwo
-# M97z9aMZnvaSbPd/ODYQ3AJjVnkFonOpq9VbKXwC0aZOlsR/SWUqBwDfGZeKTdmk
-# +0R4vNTm0WcLRwXFDPSTWm+draSfohvLi+ArYfbwqhUFz4UpowlNU3i0SwHpTlck
-# zKyHohSCxbLHRhoSwutaesCOAHACSQP3Izr6opWWVIvubqrZBQC7pEaxS4gxfVp9
-# zqCv8TMpVS2pHy//hnfZkJRzpB1/cY03qOqNAb55k6tqxOHLKBH/q6XLaCljtI6h
-# xMD0vroj2qhyUuoltYruLo7BBoPKCwtwQ7EMkRIzAeM7HXfqOYoL79WwitBBPA1N
-# Odm0JPS4spG5YvsaPGBpSyTsEWgFhjdGJC1CRsnAQBFz70qoU2YwJLNcWojdML+U
-# r2WZaGJ39co/KlUeu+hRG9jVbjmlQeIn4XTKGS/V0VWlak6RHEAenOWpD3G3Db5j
-# ZaR1cf+bQVF9YbvhUfCTHqYHq95rwaMuzG6puoU72nCDlLpPxVS6iEmdoT4VgDqS
-# YQCqP6I6vDDyK6DOOYPlZ9HHI+QXd6+rk+Wgf183/W3LEL50ZRV+KGRwHa2PFZ4D
-# LbJKwtlwUeP7G00uM5nnlXL4sPBEJtFeugeFbg6MpZe0bgxqIT3lfGGk1XI4QFR2
-# uWNYFdkowbtDnxahggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQsw
+# AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUMnzVC3yZDlPaIglr
+# kiR1oORy/4IwDQYJKoZIhvcNAQEBBQAEggIAQT0DLSYqw8uC4xFFXDzw7uqfVthb
+# r85kO2HNt67M6qb1Q5bAs0yGmaaTi5pqvssxehwHfMUZwP/Dax+s4HDXqh5jAOEd
+# x3eYVGRi5u3cx8kRfQ/y6P/IpvQsVqEg/izZ2WyEgUs5b/eut+czelAYz6I9425N
+# n6F+2up8qv2Tah6HN3blazMzVvciRvcVMoc1DJFHJS5mZlpTzPZi6SFFuGUSeoUZ
+# QCPVc0QZBg5bwTa4KHnZUeYpGGLbtSoQnn88wlTHBXugSWyQEULwNy77a64lev5B
+# /B6+obdGkJG13XVgOFFjr7TzQk7nHtkAf0fEBDow7k/wQeeceeewe30iNLLX5Z5V
+# zDHISPo0aAyJqe8iiuRUH9PVkxAmUxHTAWca9BaWG5ZnuiUwD5b/rCSI67D+ZE7n
+# d1BjK8YDr7rXC5qB1jV9wdMPFmet7jlLKOrQe/le2rB7cA15UBFKTB6pjE16c1h2
+# 8RyX0Z9ZATdX7iufzvfIGpJE8lnOVWQLavfLKAABEtGpM1e/YKDXviOnxqIEf4B3
+# 4lbKig7nhc8Gp1vB5Aue/kqRbLQnDpajDBCU/vyEGSxpdaFF6Q1JlTFMvJBFntqv
+# eKKNueqtHsHwj7kKaDbr1x3K2GfT0juKaAc/CGzhdBUrB+tuaORpblFQWZu4TyPR
+# 9Pl4sSZjdCqmFMChggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQsw
 # CQYDVQQGEwJVUzEXMBUGA1UEChMORGlnaUNlcnQsIEluYy4xOzA5BgNVBAMTMkRp
 # Z2lDZXJ0IFRydXN0ZWQgRzQgUlNBNDA5NiBTSEEyNTYgVGltZVN0YW1waW5nIENB
 # AhAKekqInsmZQpAGYzhNhpedMA0GCWCGSAFlAwQCAQUAoGkwGAYJKoZIhvcNAQkD
-# MQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNjIyMDEwMDAyWjAvBgkq
-# hkiG9w0BCQQxIgQg7O3PJtVsMBPDlEZCuOWmw5rTy5wVFGe5K3dPahMrGggwDQYJ
-# KoZIhvcNAQEBBQAEggIAW0Bd43WZ6dz2vZaHucGF+gttzKXiieMkyYwWTbN/fv0P
-# iyhGKmMaCpKaDhnPIB1ENbAfH4BoQKigBLpFLuP7e77SQQrTzYgGWQs7IDwoShF1
-# FkAeEJBzC4bOVlw0xb5xAO07mpk/5ybuvdT48fiyjZ94tVTKSG3DJjWM7nBHVh0L
-# eEexdiREkr4Ezyn4dCsnB/XxdgFlyzKimMMxDe6LSDD9KS0qAPbjdtFy93PM8mM5
-# pr6bxbM3E39oDvWbf358q749NGafjhHiNOq7gP+yvE6F8+iHOkfRWNGYBBJZLBfJ
-# ssFBOyv/IB5AYYcrgrFgrjV3kGjwzTBca4BC8sIbnT60WJT/5Au+3F8hGvgIu0EM
-# G8pGRK68LJ3W28EWlw530H70L+/YnMKdaVNunHl9QEVGfSqvcpmURs2CFDIKlcdF
-# xO+qdemIYPAwnLZb04ZFIEAHhuTLl4uSKh36EC7Bz83FIJn5spN+kDcZqoCvNVvW
-# MyE4P2ymiYdKY0G7NnH59xU/SRm0Nw9F0ixJp8LMaS7MXG+pfO/BxnYKYUoCYxqw
-# 3zcYvmHvqWFEfRdD7baS0n4mn4hq/TmLxT7Y+kHD29zZzYKw70m67lW2DEyE9G3u
-# QAlTMNty9UJW0HWezMbjGfs/9iTBTtDlr9pA2Iy7l7e8Ysg+H1DQRG+59s/kho4=
+# MQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNjIyMDgwMDAxWjAvBgkq
+# hkiG9w0BCQQxIgQgTDa+gpHJDgfApC2fspiEKDOe4TKYH49iND2kkp+LJSQwDQYJ
+# KoZIhvcNAQEBBQAEggIAIcvQWMyXrJQHqikC47jGzkbReJz8CMmKeuZmQWm5Sr8c
+# YimBVZojDvncEYSHPEMVSPXLj5ESnYkHCAEiX8PpMj+YKIODdOlcxhZ9PWUKEz5i
+# twa8ZgHpAUh3cmn5M4e99O44q8OqtBc3pW9HL9Av8NeIsMv37GqMgTA0EPgRSrz/
+# 9EioZiF89IkYcbcZc1ib1s/A6Tvm3azi/ajU6TrvmXMuOVsyr5gPDOj3vNL70XTg
+# 7gTlDfNhxVkWT003Dtp1CEqf8wGqfw+uwTmhqLeDMMJ2L2VzsfDh12O80sNr8Qq3
+# gUJugnG3fWmcJce75jzEsVTNEASg6hpQrlDfLKfl3yAl1I7+94Mt6bRMQAlphPdo
+# M3xGOimWgsZRkYvQtbukypm8GeSgykvIbd6y7FAuK3xpsXAzmXVqz3WAfOxuv4L8
+# /eLmtW+M1g6r8Vkutui5G8jToFmIE58a44tpfFJMyBOYzNxUeNqfAB26zU1Jh5z+
+# +s9Mb5TUIl51w5j1Q3lWavVi5Z8DPbu0sL6twA5/ogMM+mMI2slvLNQjOdRbPmAZ
+# p21ENQ7seJA4OruNMjPC8FBdtecT9JceUUqviqhq4S13bZT1xbrVi8gnYs+tKNht
+# ASC8RvlucsNbW03Lg54lMYO51yWJlj2N/V8yvBgnODjXfTxVBAHT0tip+DDuS00=
 # SIG # End signature block
