@@ -12,14 +12,23 @@
     Set Key Usage for Digital Signature and Key Encipherment
     Set-CAExtension -RequestId <ID> -KeyUsage @($KEY_USAGE::DIGITAL_SIGNATURE, $KEY_USAGE::KEY_ENCIPHERMENT)
 
+    Get Enhanced Key Usage
+    $EKU = Set-CAExtension -GetEKU
+
+    Set Enhanced Key Usage for Client Authentication and Server Authentication
+    Set-CAExtension -RequestId <ID> -EnahnacedKeyUsage @($EKU::PKIX_KP_CLIENT_AUTH, $EKU::PKIX_KP_SERVER_AUTH)
+
+    Set Issuance Policy
+    Set-CAExtension -RequestId <ID> -IssuancePolicy @(OID1, OID2)
+
+    Set Basic Constraint Subject Type = CA and Path Length = None
+    Set-CAExtension -RequestId <ID> -SubjectType CA -PathLength -1
+
     Get Alt Name enum
     $ALT_NAME = Set-CAExtension -GetAltName
 
     Set Subject Alternative Names
     Set-CAExtension -RequestId <ID> -SubjectAlternativeNames @{ $ALT_NAME::DNS_NAME = 'fqdn' }
-
-    Set Basic Constraint Subject Type = CA and Path Length = None
-    Set-CAExtension -RequestId <ID> -SubjectType CA -PathLength -1
 
     Set strong certificate mapping OID (1.3.6.1.4.1.311.25.2) to specified SID
     Set-CAExtension -RequestId <ID> -StrongMappingSID <SID>
@@ -290,7 +299,7 @@ function Set-CAExtension
             $Extensions = @()
 
             ############
-            # Key usage
+            # Key Usage
             # 2.5.29.15
             ############
 
@@ -323,7 +332,7 @@ function Set-CAExtension
             }
 
             #####################
-            # Enhanced Key usage
+            # Enhanced Key Usage
             # 2.5.29.37
             #####################
 
@@ -602,8 +611,8 @@ function Set-CAExtension
 # SIG # Begin signature block
 # MIIeuwYJKoZIhvcNAQcCoIIerDCCHqgCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU80GbJuEvu/9trT+xBUDzD79+
-# Eragghg8MIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU74xclBO8nvqpGLktU193qY0t
+# Qyagghg8MIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMTA2MDcxMjUwMzZaFw0yMzA2MDcx
 # MzAwMzNaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEAzdFz3tD9N0VebymwxbB7s+YMLFKK9LlPcOyyFbAoRnYKVuF7Q6Zi
@@ -735,33 +744,33 @@ function Set-CAExtension
 # t0RbtAgKh1pZBHYRoad3AhMcMYIF6TCCBeUCAQEwJDAQMQ4wDAYDVQQDDAVKME43
 # RQIQJTSMe3EEUZZAAWO1zNUfWTAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEK
 # MAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3
-# AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQULYl9c1WfVJeqINUq
-# WN3HRFvTwwswDQYJKoZIhvcNAQEBBQAEggIAlPyQQXBdAdVc+xZgFg/fxKTEzxUs
-# cpWi165FaTeYOZjvKHOMFBXFsxPPVh+XLiTeIOD0h+EujLjVFyaQJuLplVqR1O3T
-# HqA7clP+2+66gXUGEfP2VHlTKWRFBl4zVe9ka1RcosJF/dt/C+53yejZN2uxMNMO
-# BOE3xY0DyqQt6hXhDJytdP+TCvb5Q0y82pLgdgqa4zzE2YCohi9MdULX97RDNjZP
-# 5rgZnOfY1Gc56wQEENhdnV5+AAiyhE5HF+i+9HQNh9mTGsCVPBFS2LdePcgjHbKW
-# WmOSYt/RuEDEKlUJ1v9tHFxsa8K0Oud8eTSk6mZAOatHzXq1RiAX0rp1ifVOetOZ
-# 4xY5ruvTs5/9bpl8G8sUompRFKH8R6kbf0hxdHuJp91MdzPaGEBrB3lX+atDr4Rs
-# ZGoq41Ank9Ot2hGJQoUOTdjkc3U4Lfg15MqNg2HbZln+UuqbZVSqL8YKtPj9f41h
-# 5lhdj/3sEcKKF0mefXWejQlWHFUk71pUt8enhNCHrECvwmtiiRcT/5vrVGyi7flc
-# AJ7i+tj+u3417yzhTr20i7TbSJZ113aDRiQ/vy4d1Aa1mWcxNrpqCgqM4/1NYXqh
-# uogJr/3QKEo6uRpIXmuCOdAvqt0cf56ihmb/ai28KXfMz3b9qjH3R2IyS+Bk1dbL
-# L8iiaqEdCA36yZ6hggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQsw
+# AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUU3S6/mEnzTQEzm0i
+# HoG7HsjTk9kwDQYJKoZIhvcNAQEBBQAEggIAo5oElkcEvD/V6vZiSz+fANPEVOnX
+# DaeMZwkgGVGxYEF+I3H6DZFZIqgdu0y0SPzVldEsH99N7tn0hAgd/2mF/pjTtMwv
+# oRBFcXK6dbQgW30cE3rSf1q6jOYQMK9/QZB2FBzqMDMCEf2mGiXsr8u5ci6BaWJ2
+# Zvj7p60Qq3Ne7IEDY5oBWniPyFOxqcDhs/CkPVCr1+27DnhMyIfe/ZVHjASODIC4
+# pO+0OC8Med9hCr5DWZrv1oA7AaS/PTi9wZkn1jFjQCGpjDHHta4dbEwOkeFiJp6C
+# KhjVmBZb5qFgXHUkJSwHxzkpKyMH60+ghZDl16z22u+2d2OMTTrslvrLky2h3wl3
+# 5peySufCzq/IfyTUPNxr3ixLphUwwN9AHbnb7JGtOLIEtssuLBT5nYMfw4Fd5PGZ
+# 9ioKm4BdpEMlnaEH6MXboXvhUYzKXmQ3S2DMiiA5p9H46ZBsYiE9mpnsCWq+ORdH
+# x9o/X5KwvpLphmcjLh55ageGbZyxk1EitNS5E1nd9OE4D6hvMk2oI+jHaiKFTgMr
+# NtRT9bQyEdjfcflrXagwSEOTzw66IZuOpI6IA9lwkXIAmXDxr7SrxJoZtDug9qAF
+# K1yANPIg+UPSNZyBVJIWz6is4E2ddoVncxLu9ZE55fx6bMIqTmNSfKK/dVOPciRC
+# 8/5go95jV2iSMX+hggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQsw
 # CQYDVQQGEwJVUzEXMBUGA1UEChMORGlnaUNlcnQsIEluYy4xOzA5BgNVBAMTMkRp
 # Z2lDZXJ0IFRydXN0ZWQgRzQgUlNBNDA5NiBTSEEyNTYgVGltZVN0YW1waW5nIENB
 # AhAKekqInsmZQpAGYzhNhpedMA0GCWCGSAFlAwQCAQUAoGkwGAYJKoZIhvcNAQkD
-# MQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNjIyMTEwMDAxWjAvBgkq
-# hkiG9w0BCQQxIgQgmf1DX9XBEd/0uvTwN2go4Iyy5Zqvhp6gTdX8sY1yQnIwDQYJ
-# KoZIhvcNAQEBBQAEggIAWUqGY8uxZgBrdB3d3hnv+w6YT2ogSKFXJ87hIDWK8vO8
-# gxOMoM4k3hb24/Aje5T/T+YdK3pGq4O6RpopmV9VLNpEFlOjXqk0gw9X7bOgrnX5
-# uEYkM10Yf4WIZgTSKGptVDYI1w/CYCM2FDKj+Ncn7RMMEhSaAIZc7WajwLosZCY/
-# fiC3TRbvBtmgsEX+VCUWwuDS9f+sxeBdo4PrymYRQPrBEt56tRMMD2026QLUAUx8
-# mhLR1Q5Hecm2875/UcP8lA1bqK7+Tk1xU4uXNEbCUHqDczu5SHGdPjQqlw5QdYK9
-# PPObHjgyMuJ5nuV6zTw/mKKublOWDRSFLaPXZhKit7sADn8PaoFo3Bv3I/TCVQaO
-# mhMKIAf0HuwjKZczv+1i6Ay1J/BMcrx9JWRgfIJ78j9Lo3uzQDBh1KuGVeMWsO9i
-# o/UGuXCgCmxnDq0OgdzLOrdBZ79Dp5pxwXO3GbkZn+N1/6OkN4s2PIXym1tSHDYG
-# kduU4flnhR3e73u/MOIAcAe4RGlUt8rqpzCDbRe7nHoKvt4kIMvkBp3S7D+W4Byl
-# izrnH9shevF6LOLY7F7R4Z09yX4gJuPQKvRWThAwBLaC7AFfKcSXvuR7VKfJUMwy
-# BRJ2lDvMFd1jO/wrLAlHX55SnD/7EtpkVabuCOTKKohjcFYNaqOOhO/g+UCPu2A=
+# MQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNjIyMTIwMDAyWjAvBgkq
+# hkiG9w0BCQQxIgQgyfYy/ZYLqPbxjfmFoNsGqeozNq6J4Pjpslttv9+JGw8wDQYJ
+# KoZIhvcNAQEBBQAEggIACyti+BTQgTdib6lO9yOoB54y7m3bwE4Us+JHAjZFeprG
+# k4ATllCu4UY49zaRfuImQUthGJc7bBdzUZBLvjS61tcqQnuHEUV+JHlobKnW1N2A
+# EOmytuK5BKreSRJG/9vThkRR64jYac1o6YNPVzei9+zz4ai7zmKRgNNjdecbU9Op
+# V89u6kGsXul5u9QtjjiNZF7EdC/RqiTfZJUeurQS+kHbrrXcjabc+8J+LBL6xRig
+# V0Ni4m3fjvaI1Ho8E7BCzOiGAHlf3eYYd7AKXODDNDaLHkMbHlJ5YvvdbkpBue4L
+# RolWjXycFsZVlWOfz9cNw3KPExgzSzkF0Rkwwop89iIbRztZqREEjPnaNZFlC+aB
+# EKgXBizSwH9o7KbudGKfO72kC5XHnC7DpmEi8hKDxo/d1t+NhNIpo+EVqegLl8Za
+# Dyu3eOR0olVMDHuMVL59fzGdlZzMlZFuw0w+0BgZK1hfpWTvVI1AQ+DfouNbKtVL
+# v4s/F+sOGSkuYpCKY9NGKEFflr3FI0a98CizmqpHgpI3q+SAwEiDQib6J35KPvi+
+# P/Z54f9/3FP4mFuW8QkQBYcH9XqDUtv1iGITa3JSCdjU3VO29QCWgJTzs7bEAyof
+# ogoqMoWcLaaugu8ceGmmy7GqVE+M9Egm3deBFzFdSZjaFYr8wChTiJVoDv1Rmfs=
 # SIG # End signature block
