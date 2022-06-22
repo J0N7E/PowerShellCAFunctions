@@ -75,7 +75,7 @@ function Set-CAExtension
         # https://docs.microsoft.com/en-us/windows/win32/api/certcli/nf-certcli-icertconfig-getconfig
         enum CERT_CONFIG
         {
-            DEFAULT           = 0x0
+            DEFAULT           = 0
             UIPICK            = 0x1
             FIRST             = 0x2
             LOCAL             = 0x3
@@ -86,7 +86,7 @@ function Set-CAExtension
         # https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-wcce/8116912a-59e6-4849-83dd-77b39b6370e0
         enum PROPTYPE
         {
-            LONG     = 0x1
+            LONG     = 0
             DATETIME = 0x2
             BINARY   = 0x3
             STRING   = 0x4
@@ -95,7 +95,7 @@ function Set-CAExtension
         # https://docs.microsoft.com/en-us/windows/win32/api/certif/nf-certif-icertserverexit-getcertificateextensionflags
         enum POLICY
         {
-            NON_CRITICAL = 0x0
+            NON_CRITICAL = 0
             CRITICAL     = 0x1
             DISABLE      = 0x2
         }
@@ -429,8 +429,8 @@ function Set-CAExtension
 # SIG # Begin signature block
 # MIIeuwYJKoZIhvcNAQcCoIIerDCCHqgCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUEidVvStI2R6zA5b5zSK+uQDK
-# IASgghg8MIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUG9BAK4NtpOwzpXKkjoOKp81i
+# GBKgghg8MIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMTA2MDcxMjUwMzZaFw0yMzA2MDcx
 # MzAwMzNaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEAzdFz3tD9N0VebymwxbB7s+YMLFKK9LlPcOyyFbAoRnYKVuF7Q6Zi
@@ -562,33 +562,33 @@ function Set-CAExtension
 # t0RbtAgKh1pZBHYRoad3AhMcMYIF6TCCBeUCAQEwJDAQMQ4wDAYDVQQDDAVKME43
 # RQIQJTSMe3EEUZZAAWO1zNUfWTAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEK
 # MAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3
-# AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUTW2koGLe/HuInbNI
-# aXKVRU/OItYwDQYJKoZIhvcNAQEBBQAEggIAGTTvIoGugSVPvc98CxVSIGCegXwo
-# M97z9aMZnvaSbPd/ODYQ3AJjVnkFonOpq9VbKXwC0aZOlsR/SWUqBwDfGZeKTdmk
-# +0R4vNTm0WcLRwXFDPSTWm+draSfohvLi+ArYfbwqhUFz4UpowlNU3i0SwHpTlck
-# zKyHohSCxbLHRhoSwutaesCOAHACSQP3Izr6opWWVIvubqrZBQC7pEaxS4gxfVp9
-# zqCv8TMpVS2pHy//hnfZkJRzpB1/cY03qOqNAb55k6tqxOHLKBH/q6XLaCljtI6h
-# xMD0vroj2qhyUuoltYruLo7BBoPKCwtwQ7EMkRIzAeM7HXfqOYoL79WwitBBPA1N
-# Odm0JPS4spG5YvsaPGBpSyTsEWgFhjdGJC1CRsnAQBFz70qoU2YwJLNcWojdML+U
-# r2WZaGJ39co/KlUeu+hRG9jVbjmlQeIn4XTKGS/V0VWlak6RHEAenOWpD3G3Db5j
-# ZaR1cf+bQVF9YbvhUfCTHqYHq95rwaMuzG6puoU72nCDlLpPxVS6iEmdoT4VgDqS
-# YQCqP6I6vDDyK6DOOYPlZ9HHI+QXd6+rk+Wgf183/W3LEL50ZRV+KGRwHa2PFZ4D
-# LbJKwtlwUeP7G00uM5nnlXL4sPBEJtFeugeFbg6MpZe0bgxqIT3lfGGk1XI4QFR2
-# uWNYFdkowbtDnxahggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQsw
+# AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUnLtYNShetUZZhiKd
+# I5hfm9BOHucwDQYJKoZIhvcNAQEBBQAEggIAOczYpHz5bSFA2Gl/EXtl2q8OZmac
+# yl+qEIf2QNLVv2kZkd7U0GfWgsPcfVntnVrGl56dt81nLOx2N7yjpfAQw73jKwUP
+# Z7OvaNSXaywaiDd5YWVA87LNhYrk1CIQ54103+HVhIzqkjbsNkGgIGKpQpi82YxJ
+# L7m/2PbV4dvDsVbTgIPb6j5SJzeMFMmi6UMN1jWAEFDy3wF7erD0n1Cj5x/Ljshm
+# qUpT6x0XJQsV0lDAZCGEQs8E/iXO31+2eDTTaL2a5u6lv1BvNMy05r9XV3LesPfr
+# UKRT9YVhExgAsBA36CRXb0kjYJEvOnQkGh9yhSh2tiQc0zp2SZk6Mxe1xrQIQQSr
+# K2fABgz46QtwEJGGpAweBiPDXaUElEwsVe/Rc8+r2mZCyVn0CCQHnLJ3hvLpAMRa
+# WEavv8l8QM6ujefKe8uJzS7ceUOY82gHUDAymmItCwuI4uqa01PspSVjfmoMwDls
+# jXO6YOoEHJNhoGiJPpjjA353jGNUMcsqc0baxXnDRxMA6nDgaYod6ZD0zIygcwqR
+# zjiFMeK6d7B/VFkafoZYVhNpfti9PX9pc1BsBcjvBsCYe3sP1JkLQxYCvYjGwpk/
+# 6A3BlrHOpRuR2MQ/ikTisHR0Rrp7pVC/y5VeKfZwKr0uGWHA/yGXP7aBy3mEm5w4
+# toisy0V1WMksKUShggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQsw
 # CQYDVQQGEwJVUzEXMBUGA1UEChMORGlnaUNlcnQsIEluYy4xOzA5BgNVBAMTMkRp
 # Z2lDZXJ0IFRydXN0ZWQgRzQgUlNBNDA5NiBTSEEyNTYgVGltZVN0YW1waW5nIENB
 # AhAKekqInsmZQpAGYzhNhpedMA0GCWCGSAFlAwQCAQUAoGkwGAYJKoZIhvcNAQkD
-# MQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNjIxMjM0ODAyWjAvBgkq
-# hkiG9w0BCQQxIgQg7O3PJtVsMBPDlEZCuOWmw5rTy5wVFGe5K3dPahMrGggwDQYJ
-# KoZIhvcNAQEBBQAEggIAs00T9rh6CBL/ZtFH1Eju0iYLvnbNeWYqfFjsMCFnX2rn
-# MMmrxYaCQeuaI+5/7W7/Q/Vz0FUxhD0W1/5A5zbS+RQ5MNY/TR2zTB9wIJM0Xk2O
-# UGqpW4CiNO9HyK8Kc5xmpiEz81iRq2Uwi/nfk7UjPlwycRxk4rpdx7PbXJTq2yj7
-# mSbuM/lIzeu9pgAwdWUFyu9wszf7npJXtG3sytXksQJ1EcDUiH4a/UDVKi76XnXt
-# x6WO+HvtxY4fFpgP7oz8dHp6vweJeFs+lYFvU05WrMMp+5kzvFB4f+Wxn7kBBcW9
-# 8FxYgQgSBarE3WAUg8p+aeOGg9Uf/96wHtHxOYS9LIdJqYwt0eJfvwOOkXUtoh9D
-# 6I+wqefFR18Z3cJnTsyl1r9nrDQUFkcOfBs7kgRXXaJg4vM3Q6NIyyFDerVaRdq+
-# i+hdHY3HTv0j6X+osVZ7qJtgeBekLwiCZPPgvbKQberUvRuT3I4aE7ipeNnnJmd2
-# HPY2UET8EwHwfaNqfB9pTh+Wa8tgqgzA7xiou37iHgs7hRklgXYw8mZ2d/O1PCrf
-# ZuhrPFwLm/eRhrg2FDrLakEH0aItH6Yvx7U8wnPgtXFg59kpEnguyu/HGRy/4BmQ
-# QxqVeAFcCR2i8ib6aH15B733FlwFqDYrDtlQaimUZjQ/10j6VfDhvQM5bVlgl9s=
+# MQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNjIyMDAwMDAyWjAvBgkq
+# hkiG9w0BCQQxIgQg/+N4Db0ohriYa/wXMltmLg42jwkxYGm+oeZN+0CWjAgwDQYJ
+# KoZIhvcNAQEBBQAEggIAJiPzrVJlnXA4x3hRw0zAyc5fSqxhGJZNg7bgrNgm8fuc
+# SCy9seRJLJD/iEEkgPZzP1xFUnagL2qbNeUT+QIAvc9TbkwYtRfCdubZQmPqLiXi
+# 7NX9cHM1AF68GTQrM4NYKmZf+01t+vF7Sc4fPv7qgMguirbnk+77u9HZseSdxTJ2
+# 4Aj9r1LQpe7Yz4RTUT2Vih/eKlaWgplfBSTE0dCbFMDNu0iYnkn0lxNurGQCGzUk
+# HBeS2zh/ss3w3dO+4Al9coh1Ue1/yGvUAa8Ws4X2HK4mFYKBkijMvccsR6N41hTD
+# FsPmK2Q9S0dc6bwushh26o4Jx0e6VHhyjY6P6VUuYjfhNoSOSDY5mRZp7hxzbY5g
+# OlFCn/4Db/k4fiQmOvsr1waHliX7qZ+nBJ+itdc174TkHBWXP5QDzG42EmFP9Ha/
+# 9KbVmAp7hw+c31bsdgt0o7qWhXmDuZ3JXr74ZcKRO8AwA3vNKiymLBbJHIF1KNFd
+# zePovTtCgZ3QN5/gx8wtMalEaOKFrbU6jg4HrC1JkbIIFcta2RAWztJCxQ6x7X5x
+# PeJSJhUgE4CyfhZ8ax1Kf1qByp4giOLbeNA3H8l992C5VXlIDBh/3McqsfR5ST8x
+# WG07FF8+1tFGY1x7QZdw/kWZhWiDvBc4yNTFDFxeH69+ui1aQRD7ZXpyVQ5f818=
 # SIG # End signature block
