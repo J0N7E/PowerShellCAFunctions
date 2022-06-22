@@ -50,6 +50,15 @@ function Set-CAExtension
         [Parameter(ParameterSetName='Set')]
         [Array]$KeyUsage,
 
+        [Parameter(ParameterSetName='GetEKU')]
+        [Switch]$GetEKU,
+
+        [Parameter(ParameterSetName='Set')]
+        [Array]$EnhancedKeyUsage,
+
+        [Parameter(ParameterSetName='Set')]
+        [Array]$IssuancePolicy,
+
         [Parameter(ParameterSetName='Set')]
         [ValidateSet('CA', 'EndEntity')]
         [String]$SubjectType,
@@ -65,12 +74,6 @@ function Set-CAExtension
 
         [Parameter(ParameterSetName='Set')]
         [String]$StrongMappingSID,
-
-        [Parameter(ParameterSetName='GetEKU')]
-        [Switch]$GetEKU,
-
-        [Parameter(ParameterSetName='Set')]
-        [Array]$EnhancedKeyUsage,
 
         [String]$Config
     )
@@ -359,6 +362,50 @@ function Set-CAExtension
                 })
             }
 
+            ##################
+            # Issuance Policy
+            # 2.5.29.32
+            ##################
+
+            if ($IssuancePolicy -and $IssuancePolicy.Count -gt 0)
+            {
+                # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nn-certenroll-icertificatepolicies
+                $CertificatePolicies = New-Object -ComObject X509Enrollment.CCertificatePolicies
+
+                foreach ($Policy in $IssuancePolicy)
+                {
+                    # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nn-certenroll-iobjectid
+                    $ObjectId = New-Object -ComObject X509Enrollment.CObjectId
+                    $ObjectId.InitializeFromValue($Policy)
+
+                    # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nn-certenroll-icertificatepolicy
+                    $CertificatePolicy  = New-Object -ComObject X509Enrollment.CCertificatePolicy
+                    $CertificatePolicy.Initialize($ObjectId)
+
+                    $CertificatePolicies.Add($CertificatePolicy)
+                }
+
+                # Create extension object
+                $X509Ext = New-Object -ComObject X509Enrollment.CX509ExtensionCertificatePolicies
+
+                # Initialize
+                # https://docs.microsoft.com/en-us/windows/win32/api/certenroll/nf-certenroll-ix509extensionenhancedkeyusage-initializeencode
+                $X509Ext.InitializeEncode($CertificatePolicies)
+
+                # Add to extensions
+                $Extensions +=
+                (@{
+                    'strExtensionName' = '2.5.29.32'
+                    'Type' = [PROPTYPE]::BINARY
+                    'Flags' = [POLICY]::CRITICAL
+                    'pvarValue' = (
+                        ConvertTo-DERstring -Bytes (
+                            [Convert]::FromBase64String($X509Ext.RawData(1))
+                        )
+                    )
+                })
+            }
+
             ############################
             # Subject Alternative Names
             # 2.5.29.17
@@ -556,8 +603,8 @@ function Set-CAExtension
 # SIG # Begin signature block
 # MIIeuwYJKoZIhvcNAQcCoIIerDCCHqgCAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUPrrFf+KUmxkIYx8WyxcVJRhv
-# Pfugghg8MIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUVb0baIeeXwIPQ6URsmF3oaYv
+# //6gghg8MIIFBzCCAu+gAwIBAgIQJTSMe3EEUZZAAWO1zNUfWTANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMTA2MDcxMjUwMzZaFw0yMzA2MDcx
 # MzAwMzNaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEAzdFz3tD9N0VebymwxbB7s+YMLFKK9LlPcOyyFbAoRnYKVuF7Q6Zi
@@ -689,33 +736,33 @@ function Set-CAExtension
 # t0RbtAgKh1pZBHYRoad3AhMcMYIF6TCCBeUCAQEwJDAQMQ4wDAYDVQQDDAVKME43
 # RQIQJTSMe3EEUZZAAWO1zNUfWTAJBgUrDgMCGgUAoHgwGAYKKwYBBAGCNwIBDDEK
 # MAigAoAAoQKAADAZBgkqhkiG9w0BCQMxDAYKKwYBBAGCNwIBBDAcBgorBgEEAYI3
-# AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUyfJGCNwgush4SlQm
-# 5VQOD4p3ZYYwDQYJKoZIhvcNAQEBBQAEggIAEXLvK+wcimoTwaSUO2+ppI84MIlK
-# XSEJN/BNu/9QzRCGyEx9/sW8Ft/gxSoHEM6Kpp84eAa90KEVr+MG/jIf+4Wh0gGH
-# 8TxCOY2o/HSlDST1eFX9fx13qpq3jLITv08Sss2broDNHTR2UeLra2FMHjXcw50O
-# +PkSMklBzPYyBNjKMWVX+f3JcOtsWput2EfrJVQ9/CEecfh3hUFEh3vZts6MyeAL
-# BB4s93oqdAkh5o1LzvkoPhRFnGAaIUep/hms4mdLVAiWMs8EjZdGISIXFUvZZIi/
-# L6XDg+WL4nfuJVSt0zCXX1Gqya8vqz2+3WSsjafDT+opo6g5YAwlx9XOkTupwXq1
-# 3E8qv/njF30WJRNp6ZzQaDWl0A22er2HYZVvrpZHrOF8zVIoDyKAncNjz6yK3EX2
-# uUnPvGNV3Ru8d1AAdPjFQorhs3JASbCGDhVPilgpE33OEk+vuz/IsLzzrGH3I0SY
-# 8/Zh13MWaxPTv7a2roM+rKH87KgJ8z8SB/An/atGumS8kBqMuADRyJT8C7Lu+0EX
-# 7yVrdXvfPy5xgloF2EJ+H+MfNntbFnB7G526McPnxRK+hx2VQosQLjnDdK87YMkA
-# 0ObCkOKHk8dUm1R7AfBlBK5dkUoE4rNZW0P9LkInzGpm2PWvXdKakj5pVcqAH5px
-# QhNrWgK03CYkTyahggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQsw
+# AgELMQ4wDAYKKwYBBAGCNwIBFTAjBgkqhkiG9w0BCQQxFgQUYV98newOWp2u1gmp
+# jAg4GZ1bwk0wDQYJKoZIhvcNAQEBBQAEggIAETJyOvEHAKqi25jEkKucy6tTrrSz
+# wljbtlEv4VU785F+AGGD/XOgKWx7CGju3GtwxvTV+uJyiBXKFpi8e2ntYtsDK8h9
+# 2mcnHuRLwwvq9NvS0n3GnWtB1wjkwesHZc/agm4x33OY5jERX8CtBq7takYPlWoU
+# IVh66Q+Dps3xoVvVNH3iKhVLACgPCWYPobuEJkI1wLoeYnUHzeWQugmrQMhcrJ2t
+# jkQ/BXO1CnvTZrxm1bx7KbGSdhUcAqfxNyjivpZ0akeOyNE2l6J9Y/Zp5LxlWU7m
+# BxMYQHKNCWV5u6sE1GccA0jhNk1GrA7VXhhWP+7Al64QH0lZpUr02nJXkjCbHG/V
+# uUGiCRdkj5J3p9PXjCK6hnXG+xkuoY25R5QsP96o2yCkV90Ryw0WgoNphyRoXx1n
+# I+Aa5cl19oVNB3O9HsTuohIU+upbT4t6sGQ3b2H9FeTf1+Y5vwcqtm9Di4TidW1n
+# S7E0wrA+FnvjAn91l7YkgRrQ508eNzfX32zJEajL0gR/8VSCmYBPGEDiCBZyZf0G
+# 9G0pJ4+xAu24WKtlafr8gypfrB92RfVBesBeZfA3hHp69+qEo2ymOlL83CO88on4
+# DbQ99HNXV6i6wSNzKkKi0afp8gIW7ArcRy1f1UbfOY+s5PFqO7v4ayq7oaTE637O
+# sTQ1ooDpXJdsGLWhggMgMIIDHAYJKoZIhvcNAQkGMYIDDTCCAwkCAQEwdzBjMQsw
 # CQYDVQQGEwJVUzEXMBUGA1UEChMORGlnaUNlcnQsIEluYy4xOzA5BgNVBAMTMkRp
 # Z2lDZXJ0IFRydXN0ZWQgRzQgUlNBNDA5NiBTSEEyNTYgVGltZVN0YW1waW5nIENB
 # AhAKekqInsmZQpAGYzhNhpedMA0GCWCGSAFlAwQCAQUAoGkwGAYJKoZIhvcNAQkD
-# MQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNjIyMDkwMDAzWjAvBgkq
-# hkiG9w0BCQQxIgQglfS9GTryNsQnJmTxy0FK1SJaY5r7SlRS4VA7oO34migwDQYJ
-# KoZIhvcNAQEBBQAEggIAohQu90usxKWv/K/FqlGN/oMUv5RoQEbh+SwINk8yWOro
-# 9+yJk4l8bqw37O4+QdYk5lSiyfW2Z1HYryou0gjYgvlzCgaE4YjhTLTjjJ7FLwp5
-# S97gU+edD/k+u++plXFd4EIscdafacOrXll2PK/RimOizz3ma0J9cnf4C1oNmrcE
-# KpBsWRv7oTSeIkVTfgWj4pVTa8Ly6Uc5mK3v2fYOeeeAYSsIxYuoCHMD86DRUbDb
-# 0czeR1YtILJKYv21wdMSzOvFyiDEvGUD9cT7+4TQhpjB76yAROvsO0tWpBDWkBt1
-# D9BLbi73ac6huX0DdM0C3UPXLCSt9OtTgeN6jwTEqrnOEhVwO6ZvWTsEPsLQjEEc
-# By1Lptae/zarLhUqcWap17Er9kgRpVQyoXEo94nEmMs/gG0AmnzIICBUQ51P7+A6
-# bfSKhWkOlQLXy4n5vWFawG/mfcSNwZbSaDNd08GsMJO9m2SqvXm4R6OAzSwd868b
-# /CGd6ztbDgpH7Hw7zRvlL68R83fxc43mSHJ9MITwlWI7cs/IR0CggO02JIU7TWXX
-# HMf76hizTARrbjZKmqPoju6Cn/ICBbhIH2KdV+GxYZFIh0JceWB253DKl44715Dw
-# 7TMbi1NOKf4fu+oLaod7x71OA0ZKXFdYs0GSAAt1yZkCZl0AS4scVDp9nyopuL0=
+# MQsGCSqGSIb3DQEHATAcBgkqhkiG9w0BCQUxDxcNMjIwNjIyMDkwNDEwWjAvBgkq
+# hkiG9w0BCQQxIgQgBzFVYSbAg5GOcsWOv8N38fuyu4jBlSY6c1Fvrn1HYDQwDQYJ
+# KoZIhvcNAQEBBQAEggIAYP++78S6Z2kAS9ThMaOhQWRmpQNHCI2V3NF3zmfTXfY9
+# +JIo5pg767f2Ig3xhXvW6DaXhha7xugxSK9z+N61DzGp0m8b/0YWXKivM3MZbnTj
+# Mi3eaUOkI9K0QVkVGtPJxY9vb+bqoJT0T1w28yX2hfZY4qIeGT8euJ4nhMsNDRuw
+# ZZwmI2Qnlhn5/GdrmVLldPClW0FogL/O3Kp4aCGFDpHKSLqTWS8kKePKRNsEs+tL
+# KOOUtQPzLtG2Zq7ib0E8NPHijXd6jhywKJ0FjkPegClnLTaMXX25eQYgE/v65+Ec
+# 0PnvfgwUBJaELLbjto5ccNT6NlGhu4o7kRJEJ8XzD/lMoimVk0kGAv0rsvSBL5lD
+# MOB8jcBUgSPVDHWnFYy0BYrQS3mxZm1iaMvcKeqZgi/yAumhX6UHmv0P9DOgvnfb
+# TBJb/cGGMe6JLbpk84wOc837PYow4uIGSL2xhaEhc5kpvKi1FsGWKUNAw3R5BQZz
+# B7XwjKfG0k2NvmBMAji3bpFDxTqh3PFRWF3xo1CWm9SHbEh7McyCwraKFd5R4234
+# bFJs6/FlaywLhRZl0u3Awgl+59UpGpEhTdz3vMQqX2BbTjLE78ziM46vWIzNQwQ9
+# hxLaTUd6rVZtqwYc+iND0t46rQEIpRpD+8S6PlHdUln4sHxtnuz+fRhvVWLtthQ=
 # SIG # End signature block
