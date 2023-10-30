@@ -63,9 +63,32 @@ function Get-CAView
         [String]$Status,
 
         [Parameter(ParameterSetName='Requests')]
+        [Parameter(ParameterSetName='Extensions')]
+        [String]$RequestId,
+
+        [Parameter(ParameterSetName='Requests')]
+        [String]$SerialNumber,
+
+        [Parameter(ParameterSetName='Requests')]
         [Parameter(ParameterSetName='Requests_GetCount')]
         [Parameter(ParameterSetName='Requests_GetMaxId')]
         [String]$Template,
+
+        [Parameter(ParameterSetName='Requests')]
+        [Parameter(ParameterSetName='Requests_GetCount')]
+        [Parameter(ParameterSetName='Requests_GetMaxId')]
+        [DateTime]$NotBefore,
+
+        [Parameter(ParameterSetName='Requests')]
+        [Parameter(ParameterSetName='Requests_GetCount')]
+        [Parameter(ParameterSetName='Requests_GetMaxId')]
+        [DateTime]$NotAfter,
+
+        [Parameter(ParameterSetName='Requests_GetCount')]
+        [Switch]$GetCount,
+
+        [Parameter(ParameterSetName='Requests_GetMaxId')]
+        [Switch]$GetMaxId,
 
         [Parameter(ParameterSetName='Extensions', Mandatory=$true)]
         [Parameter(ParameterSetName='Extensions_GetSchema', Mandatory=$true)]
@@ -109,13 +132,6 @@ function Get-CAView
         })]
         [String]$Name,
 
-        [Parameter(ParameterSetName='Requests')]
-        [Parameter(ParameterSetName='Extensions')]
-        [String]$RequestId,
-
-        [Parameter(ParameterSetName='Requests')]
-        [String]$SerialNumber,
-
         [Parameter(ParameterSetName='Attributes', Mandatory=$true)]
         [Parameter(ParameterSetName='Attributes_GetSchema', Mandatory=$true)]
         [Switch]$Attributes,
@@ -129,12 +145,6 @@ function Get-CAView
         [Parameter(ParameterSetName='Attributes')]
         [Parameter(ParameterSetName='Crl')]
         [Array]$Properties,
-
-        [Parameter(ParameterSetName='Requests_GetCount')]
-        [Switch]$GetCount,
-
-        [Parameter(ParameterSetName='Requests_GetMaxId')]
-        [Switch]$GetMaxId,
 
         [Parameter(ParameterSetName='Requests_GetSchema', Mandatory=$true)]
         [Parameter(ParameterSetName='Extensions_GetSchema', Mandatory=$true)]
@@ -323,7 +333,7 @@ function Get-CAView
                                 'Request.RequesterName',
                                 'NotBefore',
                                 'NotAfter',
-                                'DistinguishedName',
+                                'CommonName',
                                 'SerialNumber',
                                 'CertificateHash',
                                 'CertificateTemplate'
@@ -339,7 +349,7 @@ function Get-CAView
                                 'Request.RequestID',
                                 'Request.CommonName',
                                 'Request.SubmittedWhen',
-                                'DistinguishedName',
+                                'CommonName',
                                 'CertificateTemplate'
                             )
                         }
@@ -355,7 +365,7 @@ function Get-CAView
                                 'Request.SubmittedWhen',
                                 'Request.StatusCode',
                                 'Request.DispositionMessage',
-                                'DistinguishedName',
+                                'CommonName',
                                 'CertificateTemplate'
                             )
                         }
@@ -377,7 +387,7 @@ function Get-CAView
                                 'Request.RequestID',
                                 'Request.RevokedWhen',
                                 'Request.RevokedReason',
-                                'DistinguishedName',
+                                'CommonName',
                                 'SerialNumber',
                                 'CertificateHash',
                                 'CertificateTemplate'
@@ -390,7 +400,9 @@ function Get-CAView
                             (
                                 'Request.RequestID',
                                 'Request.RequesterName',
-                                'DistinguishedName'
+                                'CommonName',
+                                'NotBefore',
+                                'NotAfter'
                             )
                         }
                     }
@@ -422,6 +434,26 @@ function Get-CAView
                             [CVR_SEEK]::EQ,
                             0,
                             $Template
+                        )
+                    }
+
+                    if ($NotBefore)
+                    {
+                        $CaView.SetRestriction(
+                            $CaView.GetColumnIndex(0,"NotBefore"),
+                            [CVR_SEEK]::GE,
+                            0,
+                            $NotBefore
+                        )
+                    }
+
+                    if ($NotAfter)
+                    {
+                        $CaView.SetRestriction(
+                            $CaView.GetColumnIndex(0,"NotAfter"),
+                            [CVR_SEEK]::LE,
+                            0,
+                            $NotAfter
                         )
                     }
                 }
@@ -671,8 +703,8 @@ function Get-CAView
 # SIG # Begin signature block
 # MIIekwYJKoZIhvcNAQcCoIIehDCCHoACAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUBE3LeKNCn6q0oLbWe9M7CL8U
-# cXugghgUMIIFBzCCAu+gAwIBAgIQdFzLNL2pfZhJwaOXpCuimDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUWnrFJJAKPUEva/LV+9Z84Hga
+# 8CKgghgUMIIFBzCCAu+gAwIBAgIQdFzLNL2pfZhJwaOXpCuimDANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMzA5MDcxODU5NDVaFw0yODA5MDcx
 # OTA5NDRaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEA0cNYCTtcJ6XUSG6laNYH7JzFfJMTiQafxQ1dV8cjdJ4ysJXAOs8r
@@ -803,34 +835,34 @@ function Get-CAView
 # c7aZ+WssBkbvQR7w8F/g29mtkIBEr4AQQYoxggXpMIIF5QIBATAkMBAxDjAMBgNV
 # BAMMBUowTjdFAhB0XMs0val9mEnBo5ekK6KYMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSvWb5v
-# 2+hVfWQQBKBQxmNxP975yDANBgkqhkiG9w0BAQEFAASCAgBiO6CHtPcyRGke9bPJ
-# SeABIh9rLlh571Mw3IaZ3hqkXubp6FmcHAtwpnkFKuWJes8EhIMoBG3d0Hpml42D
-# LEk3yiCY0e057Lm0OL9fOYE5LRBtzNkqkJZhkOReiT6XQg2GvhKHJS9ajAl33rwU
-# YxPxw0efzELAYUXGFDvlfgQoyb7cLRVfcOtoY6GiAnowRYUrJ5t2XxE2M/GE5WvP
-# B1859vE82V6qf5dCkQSXOQ10vQJ5XX3z0UXC9OK5jLu+tx/gy/yFNCx7LZ1JrpQO
-# RO9tpItIR1sSjZxaG2pQ2M5T9e9VLCEH7cgmj1QPth5a5dYth56Mp+b+eYxqNcDl
-# ooCQjvtrauhXw809cZsMwRSzG4LmY488dTVx2ZMfm0VcDTqB0uh4epTtrSFuq8XZ
-# 9Lup2PSfW/VaXzbrbepdP6/pHY/s3t4UCQXTc+gmip/p+mYQYlMd+EVsk8f9jXCV
-# +mc1DUEhtNYCvc+Mogqm9BaM5bLxeX7Qzc5SgfILAAispRmAYT30052hZq+3tgju
-# KyyukLs5lxfY90NHigzfdSCKL/dUC7c2bfTyRwVSNnRCB1numTB6t7Y/Do3dLoxQ
-# UwaaBzvDHbpottdI/LOANQSRHWNMXQfCnkwjNJ81K1G4WSequrrfe+j2iPd3tKuN
-# IAdEP11aAzxVWz/+iZtsMD2Y/aGCAyAwggMcBgkqhkiG9w0BCQYxggMNMIIDCQIB
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBRR2v1+
+# KNe/EjcUhTE7Y7ZfbTljQzANBgkqhkiG9w0BAQEFAASCAgCLXn7LYPIAJBK/116w
+# oRkfvBAV8pyFVAfPi/vFzK04JyeZ2foy81cVIAuWsrUUCzLdzJ1HnibNhR/ENwnK
+# C6Plf9x/Gkgzilqc5ghi0nZa3TcXpqo9xn642koapZTehhT4KcLhU+zdsoFz86Ag
+# a1HaQfdx3RBBUWYz26n/cbfvGcQdidceP6Z1Zh+Mf66sRV+6IGZwBVkdokXtAQt9
+# WImjpltNkH/lKtdGToB1ljEKjuCMNg8YQDUW+H05QrlScVrQdZsOVjinX4rIc6tD
+# +mV0GxAB/ORKBK9YMhFyX0n/3dyGa7XdMiIZQ1rXbmua1jvBoRhZDWu/My4DaVC0
+# jF2+W9zu+oGz0iKLHftjTDXKBsBBmtcFKLMtbSsMjCxNOiprwr18UngSyO27t5e4
+# HCop9n4OQlUKdwrxbh63+khp92b7VYQAmRJaTKDoAGdQ0gvvBs08Rcw8OefJFXPZ
+# m48qn6buh8AdFwaxpUrS/SSYgdeFOkW+0ICBc4TyTaQJIGGKa7/hXsGohU6JMfi4
+# lwqnEQNzZQH8B5xMmWQV7MGTZkSQXQd+65yeQLIh/S75QF8JRz6/S+5l4zMYNbGP
+# lyP91jHu+LQbyoXediKagPcttBEMWM0HQMRIDT0li47EnhTBaO5QJPjvYr1mC1e1
+# Dh1g/8j8pd4WgtR8dvCAW9YY3aGCAyAwggMcBgkqhkiG9w0BCQYxggMNMIIDCQIB
 # ATB3MGMxCzAJBgNVBAYTAlVTMRcwFQYDVQQKEw5EaWdpQ2VydCwgSW5jLjE7MDkG
 # A1UEAxMyRGlnaUNlcnQgVHJ1c3RlZCBHNCBSU0E0MDk2IFNIQTI1NiBUaW1lU3Rh
 # bXBpbmcgQ0ECEAVEr/OUnQg5pr/bP1/lYRYwDQYJYIZIAWUDBAIBBQCgaTAYBgkq
-# hkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0yMzEwMzAxMzAw
-# MDBaMC8GCSqGSIb3DQEJBDEiBCDiKqCUmeUQ4zXcNe1BHjsdS3h2NTJAYarnl0bf
-# pynb8jANBgkqhkiG9w0BAQEFAASCAgB7kC6js0S/zi6PnDfZWc2hOqdKGBE/gwes
-# OTMghEGCDiH7IvHmc2aoI0M0MXmMHuQH7qnZpi1tOSSeJo4fxRTRzqXSqYy4+LwX
-# D4Z9A0B05LKD80T8D5Y2IO+dJDJJusLg4Ug5kQbbzJVpUeM3MOenJgfPSyU2QCyO
-# LJexkARgkQ79qyczI0JqhOm5HUYD1GzgiHIjqJnrIuea3wiFT+OMu8SF3RTRA3gv
-# rAc1dtMBu07dMxVwBFXWdtYk31sJM25LsY3ibX9+QIqGPEvMBxxX6bECQHd9AG2N
-# MMD6S1IpN+bWiOPLS2dSnho1ebT3+pdvI97fHJmbECXYRpFuBJkjICIHNerlJP8j
-# 2x1K7E3UlP5SI3m6EKMO9QPdmjVfU3ER7XZ9dHuLW+WE7A+HBvankQZ88S/Vuo2u
-# Zie8Kg0o5u7IF4yp4nBo/IXATXN2mi2MUdolOuh+mKDf8rbX6jXR9ljwqUKNR4Q1
-# 1NnStyiG7hiOQo+kNogEDPmmMKv5o3IDFmGJv1SldlkIMo/9rFgaRB3kv5Td+Iyy
-# REHC9qnbJ7jtfOutalSiiM5F5zPNcxBVt1Elx3trGdMxJ0m3pCrzg6CFB43kVstR
-# gDkqy+pe1bquESxwo2sZ7Bhqcc+ksOxqOWQtsTwfebdKSPEFL5yTBRvO8v1D5x/n
-# wevPxd6SSg==
+# hkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0yMzEwMzAxNDAw
+# MDBaMC8GCSqGSIb3DQEJBDEiBCAVzRmKRlQvFKJSNIzn7ufZm8+YHUaSfrLWEfq9
+# DRmz8jANBgkqhkiG9w0BAQEFAASCAgBi/msmsqZbjQeOyWBqzNCzgUlTOT7YUhE7
+# ZSdzECPVeCGhBOGLNZJUk6S8/N8WSJmrDsRsPEFOsb05oQI6ZEY8d+mtYKNoDOYv
+# vynJpeCPKPaJASp5S3kjBxsTFtrudvEAnazVncttqLOaMFZHgASDTywH5F0Debge
+# dxtOemB1Dyo/KeATIrFpj9zLCfWH7isVdR3wI2Aa9+zapGvvVaMoNyKWNKRrh7EY
+# 2y/Egagd3iGkvMkQs7ypwjJRo3JJVo78/cUecjxZHlMgp+lbUwAhdOwBZaKK//X1
+# 00DYekq1MtlUmheywsPAHOAFJXSV9etlimfr8tU+NjuMDov/lDWsloa8ZnKTYbrc
+# 9Vvr4dHx2/2KkFZTyUqC7hAEbLOenYO05q0oCbagqvxdBs2s2aUCJHFvnJvWgUtm
+# epLBvfSWP5pMj/nJSZIJ+aIuFjB1sY5qy5Wcr9yfLY0Un81PFcceIGZsTtqZIAWC
+# J/Ee4bF9195veVbqY7GXXECHXdmM+zX0WWjyoU5UKCIghc8FSfE0WppmeqzajU+P
+# SswAjRiup0YAe/fBSygpiDGTeDIYgdn2eQj0E+VN3AZbVtXyIxwmV4+UHd5oXaOE
+# JxeyIPiN8vR5EAT7AewGyKuldAz1hk0Oauhjb88xUSGX7bvRKMGsAzEza0ZiiNgT
+# Lb0QmopBbQ==
 # SIG # End signature block
