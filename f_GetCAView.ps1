@@ -346,6 +346,7 @@ function Get-CAView
                                 'Request.RequestID',
                                 'Request.RequesterName',
                                 'CommonName',
+                                'NotBefore',
                                 'NotAfter'
                             )
                         }
@@ -407,6 +408,7 @@ function Get-CAView
                                 'Request.RequesterName',
                                 'Request.Disposition',
                                 'CommonName',
+                                'NotBefore',
                                 'NotAfter'
                             )
                         }
@@ -571,9 +573,13 @@ function Get-CAView
 
                 if ($Properties -notlike $null)
                 {
-                    if ('*' -in $Properties)
+                    if ($Properties -match '\*')
                     {
                         $ResultColumns = Get-AllColumns | Select-Object -ExpandProperty Name
+                    }
+                    elseif ($Properties -match '\+')
+                    {
+                        $ResultColumns += $Properties.Replace('+', '')
                     }
                     else
                     {
@@ -651,17 +657,7 @@ function Get-CAView
                                 Add-Member -InputObject $Output `
                                            -MemberType NoteProperty `
                                            -Name 'DispositionEnum' `
-                                           -Value ([string][DB_DISP]$CVAlue) `
-                                           -Force
-                            }
-
-                            'RevokedReason'
-                            {
-                                # Revoked reason enum
-                                Add-Member -InputObject $Output `
-                                           -MemberType NoteProperty `
-                                           -Name 'RevokedReasonEnum' `
-                                           -Value ([string][REVOCATION_REASON]$CVAlue) `
+                                           -Value ([string][DB_DISP]$CValue) `
                                            -Force
                             }
 
@@ -700,6 +696,20 @@ function Get-CAView
                                             ).Format($false) `
                                            -Force
                             }
+
+                            'RevokedReason'
+                            {
+                                if ($CValue)
+                                {
+                                    # Revoked reason enum
+                                    Add-Member -InputObject $Output `
+                                               -MemberType NoteProperty `
+                                               -Name 'RevokedReasonEnum' `
+                                               -Value ([string][REVOCATION_REASON]$CValue) `
+                                               -Force
+
+                                }
+                            }
                         }
                     }
 
@@ -718,8 +728,8 @@ function Get-CAView
 # SIG # Begin signature block
 # MIIekwYJKoZIhvcNAQcCoIIehDCCHoACAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQU8NKldZpqfH3laKx6h5tyJRUc
-# NPCgghgUMIIFBzCCAu+gAwIBAgIQdFzLNL2pfZhJwaOXpCuimDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUrxrTkIzsM23bWOM9edO9JkM1
+# UWSgghgUMIIFBzCCAu+gAwIBAgIQdFzLNL2pfZhJwaOXpCuimDANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMzA5MDcxODU5NDVaFw0yODA5MDcx
 # OTA5NDRaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEA0cNYCTtcJ6XUSG6laNYH7JzFfJMTiQafxQ1dV8cjdJ4ysJXAOs8r
@@ -850,34 +860,34 @@ function Get-CAView
 # c7aZ+WssBkbvQR7w8F/g29mtkIBEr4AQQYoxggXpMIIF5QIBATAkMBAxDjAMBgNV
 # BAMMBUowTjdFAhB0XMs0val9mEnBo5ekK6KYMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTkSGBG
-# IPDRgOEVkKauKzBmm+tqmzANBgkqhkiG9w0BAQEFAASCAgBbwDD8oe3W53OGVDkk
-# tRqS9jfv4SiqmAISrXC9DF2ZBNBPceav97eSqZxqgTH9hlySOS5qRM5Hqy2ji7a7
-# Y4l6MPM7Vrca8sBDqiKdn3jCeRoZmlZhi+GQnwV8U/aK/BupMpSA/8XvIRJSsMK4
-# ldWhBB3rgsMMliFhAV5Dklymfqpnp5l4q2LBXJSjISMVT5K2l9esQ7Gyg8uWx6fE
-# eVGvHn5hRN/DWh5enIZv/23W05BdJtHM7kdfGfG7JJ/iytcmlEsdEFaWEOGw5pN9
-# JfjtwUJ8rgiGLnUit6yt3yepzlug+WgrotXU9d7f3Gt/fzFO0cMkPcL7JAKQjGaF
-# PykhEUxcMdSf/BtCHwWfBxnC/s7HFJnSz4M2SJXY3CkgC5F3o82pQdhE8quRzofG
-# +SCWbaFjimR9+S4YpEggzBIpEJBdys/gv8pasrmQEz6ioXnSuCf8F/zXdYq1b78i
-# bl46758aRfkbwLxSWXDmP4NhwNjw+D2NyuchqGx7X0TPPcQxzaNSU2VWIjedBBUL
-# gMzaMhwe3kS3rH+BbysZESPRHVDUQoWWtauw8wtbP6Gt0eCovMi8ZUIlsn1APifN
-# tt3BimF0pUeQ31c/RThyMAmR2au6QRqM17HSqn0l0Gatj7Kmul32ULh/sO0GtIv0
-# M0kWpQbEySG5wgxDHXDKs3BQzqGCAyAwggMcBgkqhkiG9w0BCQYxggMNMIIDCQIB
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQOG52A
+# ydtrZH5k+DATZS68B+qH8DANBgkqhkiG9w0BAQEFAASCAgDMc+JQh04cezrYKKY8
+# qBhpNvDyrmiSIYI709HaHbJw+kpjh+fbq9fG+msoD7s9ZJNwT2145C1HNABJWpu8
+# FGrMeIABnnArVD6TV0BOOLJqduVH+YFWMxJVlHhLUmbENaIadg9gjx1yC9Hi2/bf
+# jWecW2CnN0n8S/21FToD/KrPWuAw2oen8BDfXSUzRavVhWHCm7m8B+1DZmgiNhza
+# SOc2Vf0JfBNnuYqJEUDv5IReL2cISIXAW5jRx2iZvR9w6PayBKJaTcYqVV3weaia
+# KHECp5Ih+nG77eX43etQp0vTkLmh5Wv0x6Ulp63qX+0G2uYS3WfEEKQBQKrGxcTQ
+# x8MS/asWdF9kPk7zBxEpMWiHdV2eIlP5czaPyr4uJwolgHu6CgQPuGrbF6clvq4M
+# dKvcjSHDRvnoCwZkMOsbkIqg0Ud0dtepM2loaw/2zjN/MO4xcQzVswJ2aWdTI65k
+# rp5UmTmnOfwOZQE3D5qMNeyfu9KO1rtDNZnUTVlM4cVbAc/CBb4FuiS6qRmgbKmO
+# foAJZFdIRgvq7ALOwkc5Ni5GCAiwJBbf0b17XrxNgfb+aCsTjo7NXAq+7uHZ8FQM
+# Zd3/bBUvwE//fsoiiec2gSMcaS0iGYcEiNcQAOsOUhRIkUeEI1NSCQVzUjizhLCt
+# cbLVEcJKq7KL8PF7ROQPo52juaGCAyAwggMcBgkqhkiG9w0BCQYxggMNMIIDCQIB
 # ATB3MGMxCzAJBgNVBAYTAlVTMRcwFQYDVQQKEw5EaWdpQ2VydCwgSW5jLjE7MDkG
 # A1UEAxMyRGlnaUNlcnQgVHJ1c3RlZCBHNCBSU0E0MDk2IFNIQTI1NiBUaW1lU3Rh
 # bXBpbmcgQ0ECEAVEr/OUnQg5pr/bP1/lYRYwDQYJYIZIAWUDBAIBBQCgaTAYBgkq
-# hkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0yMzEwMzAxNjAw
-# MDBaMC8GCSqGSIb3DQEJBDEiBCCRpC291m8gpsWH8eL43rRii6w2IqIFw/hVqUrL
-# O0XYizANBgkqhkiG9w0BAQEFAASCAgAEaRAgMnP1kWqUpR5ctI6uobtwQ2JyDCGd
-# Egx5z6N7sFt2Clej1z30g/+oKelzMipCPUwk17dV5CGf191+F1vbu12LqXccWkSA
-# LaUvLraACi4pY1ldgka5f4DFpVGz8W8cR4xMqXdsb8OPJTo2H5xHx0lF+6wIUTA0
-# mTjGQABXx5tVU1HiZDnocCiFWM+MWwvWiNgbSE9k2Vi6wtD6D5qiooXxDv+U16nJ
-# GIXK2guRaDsJ2/2mRlOaJMlx13N9jGv/LM/MtsoptRLsgBr3sLeUDvikP8iWaCsB
-# j0NuzNQkvx/17LzgzKmjPMBpcdUJ43ZomjkSKVO0v00Q5tUsTvcurXsNIxg5aVBh
-# 0+2sZdgystQeDR0m0WLfbTVemaOVGwbEEDtXDvZoNuIENUctJ+5mgdcqgB72jmR1
-# 9NEPEmlf3BQPn/VrbDzRkPmmsUZno+gBcA9qAsHYRvpUNtQkWUPAakwR/K4i1IPi
-# qy6Ri/jbBJEt945T9H8lIVci44NliMtJMxqbn3t7krZv/SKZ1xoh+Ks5aK5bPQFD
-# sB9/8GVtJ5NFbFrv1KRcwkTxLAYPUS23oWpFylnx0+nVOsUeXIk6I7d/yIzVismU
-# ff12PXBNZCKaGmc5bn38UlLizx7lp4Pc8C+s56Wz81bahzcVT3iOOBIXNTG6oc8Z
-# /+2/r65U9g==
+# hkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0yMzEwMzAxNzAw
+# MDBaMC8GCSqGSIb3DQEJBDEiBCAokstiFPN059dSZJAVKqQh8yFOdOWL5YbzVXzf
+# rD5ycDANBgkqhkiG9w0BAQEFAASCAgBOTzgTEX0SNjBlLLnGhqL2lf+eBpW4t0WQ
+# LxsygDPaj5fb92y68J8f0AMVhgnXrn2mOi3UJlPECVcNJgDIvrKFePygJc0yj1D9
+# RDTZ1Naj2i9Sh7VhQ55TzIOD1dEINr/OgaPpohavB0DUx8GmPD6e5gV7++9F01jd
+# HLiETg0/bRYb2yqhdF4i4dVbZTEjwmb3qX6O3zIZ95rAQ8mwtJkYHXD6kJ761Ois
+# X+VkS9wZ4y1/YN7R7bMTZw3cOpGVFJprwY+LdNrXmAt18FouQutIboBAUr1IhjuK
+# lmAaBU8A0OLiPS8GihLgcJfWI9zylGDKrzO5VMEoH61fLqwvO46mok5NUt8hZRcc
+# 37sfTdnCf08VqW4s4vfS8d7RkbZRJrNrvsf9mih4J3x2JrSyQ+pfeYtB6vNShp7X
+# bc44kS45MuaUqWArPCX7yfeUhxwnSDib99wzMqZ894pXK9cxw5kG8UYF9b2iaAK6
+# Cxqc/z3lvuvZLagQ7utTzbs258SKpmpVPcEXUh2zyxtZAf/PwderFzBzB2uTflfd
+# kS76tyf7xlqvI3XfDs0fkYEp7Sv4m2rh1ZKqdfiII4VEDH4+aLXMt51c9DGR2fxz
+# ZYo9ZSPO+wFQ6DGOeNdY0HcIHUM8OftWoxFmutZyFLK1/lQXwzma01YqV9OO2yiN
+# VtU9khabvw==
 # SIG # End signature block
