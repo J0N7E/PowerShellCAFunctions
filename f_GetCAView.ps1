@@ -193,10 +193,10 @@ function Get-CAView
         # https://docs.microsoft.com/en-us/windows/win32/api/certview/nf-certview-icertview-setrestriction
         enum CV_COLUMN
         {
-            QUEUE         = -1 # Pending
-            LOG_DEFAULT   = -2 # Issued, failed & revoked
-            LOG_FAILED    = -3
-            LOG_REVOKED   = -7
+            QUEUE_DEFAULT = -1 # Not Resolved: Pending
+            LOG_DEFAULT   = -2 # Resolved: Issued, failed & revoked
+            LOG_FAILED    = -3 # Failed
+            LOG_REVOKED   = -7 # Revoked
         }
 
         # https://github.com/tpn/winsdk-10/blob/master/Include/10.0.16299.0/um/CertSrv.h
@@ -332,7 +332,7 @@ function Get-CAView
 
                         'Pending'
                         {
-                            $CaView.SetRestriction([CV_COLUMN]::QUEUE, 0, 0, 0)
+                            $CaView.SetRestriction([CV_COLUMN]::QUEUE_DEFAULT, 0, 0, 0)
 
                             $ResultColumns =
                             (
@@ -362,12 +362,15 @@ function Get-CAView
 
                         'Revoked'
                         {
+                            <#
                             $CaView.SetRestriction(
                                 $CaView.GetColumnIndex(0, 'Disposition'),
                                 [CVR_SEEK]::EQ,
                                 0,
                                 [DB_DISP]::REVOKED
                             )
+                            #>
+                            $CaView.SetRestriction([CV_COLUMN]::LOG_REVOKED, 0, 0, 0)
 
                             $ResultColumns =
                             (
@@ -668,8 +671,8 @@ function Get-CAView
 # SIG # Begin signature block
 # MIIekwYJKoZIhvcNAQcCoIIehDCCHoACAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUqFPU7QFzF/u8ZqIl/wnq2Pw2
-# 41+gghgUMIIFBzCCAu+gAwIBAgIQdFzLNL2pfZhJwaOXpCuimDANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUBE3LeKNCn6q0oLbWe9M7CL8U
+# cXugghgUMIIFBzCCAu+gAwIBAgIQdFzLNL2pfZhJwaOXpCuimDANBgkqhkiG9w0B
 # AQsFADAQMQ4wDAYDVQQDDAVKME43RTAeFw0yMzA5MDcxODU5NDVaFw0yODA5MDcx
 # OTA5NDRaMBAxDjAMBgNVBAMMBUowTjdFMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
 # MIICCgKCAgEA0cNYCTtcJ6XUSG6laNYH7JzFfJMTiQafxQ1dV8cjdJ4ysJXAOs8r
@@ -800,34 +803,34 @@ function Get-CAView
 # c7aZ+WssBkbvQR7w8F/g29mtkIBEr4AQQYoxggXpMIIF5QIBATAkMBAxDjAMBgNV
 # BAMMBUowTjdFAhB0XMs0val9mEnBo5ekK6KYMAkGBSsOAwIaBQCgeDAYBgorBgEE
 # AYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwG
-# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBQTT+Xy
-# xjBO2+ZRM5XWMtoDFBWQ0TANBgkqhkiG9w0BAQEFAASCAgCljy7mtSq20Y80La4z
-# hs3Vlz+Q3CgPyxvbZ8VjSsYcM5crlPsRLSC3NM1rl6PZgOF/SI3NLq4/4QF6vBoU
-# GwpJPdI9auoynGgXJV2c/GbZIX4ZDR0dDsarxqQSQ4VK70StcsGLJjftRo9Z0kYd
-# XzJ3B8BOKD1CbPp+hhcY824H54mi5X1N7MmJa2mir4UlSJyOAhIY2qcFB5iyxo+Q
-# sBFWFxglgsUL4kKUITD4kozgFYrMcF3ckGd8XzZ9zJ8xrIk9hjrgyIF8AJM3R4ii
-# mhFV7s30h36TPo/fhm1bEJi1uM9ARqmfib6jttvY2qO1oGK6vPMgSVWYEU29lwXL
-# 2Hrs03YAOWF0So9v+SIJ/oqETqMWVfsKfRpQ90DfkLpmMmXnEYwZdaKqclC6Sawb
-# KOqBAgLxn4vYEvwWxtRJ6sfscn/JrYWW65K9ei8ccY/D3N6IV365y/YzAxx9qt6e
-# fAkiXY27Ge+ultK5kIzs3DEY5QGu1jbqXO90waRUOLxusU7OXojqATAjkUufz3Ni
-# hnIC4F2h55O1vzTUZw3/i3WD4x7hwwOctu2+naiUtVmY/aZnTUCVxx359lhjFoFE
-# nVCqjh1xSAmgBbKq7Hj+mWvUaycSEF7/gUUGBkZSs+fUNNSgvYBX84E/Pd7VeSmT
-# y5fSl3CDn/YC+sGcweIeb883TqGCAyAwggMcBgkqhkiG9w0BCQYxggMNMIIDCQIB
+# CisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBSvWb5v
+# 2+hVfWQQBKBQxmNxP975yDANBgkqhkiG9w0BAQEFAASCAgBiO6CHtPcyRGke9bPJ
+# SeABIh9rLlh571Mw3IaZ3hqkXubp6FmcHAtwpnkFKuWJes8EhIMoBG3d0Hpml42D
+# LEk3yiCY0e057Lm0OL9fOYE5LRBtzNkqkJZhkOReiT6XQg2GvhKHJS9ajAl33rwU
+# YxPxw0efzELAYUXGFDvlfgQoyb7cLRVfcOtoY6GiAnowRYUrJ5t2XxE2M/GE5WvP
+# B1859vE82V6qf5dCkQSXOQ10vQJ5XX3z0UXC9OK5jLu+tx/gy/yFNCx7LZ1JrpQO
+# RO9tpItIR1sSjZxaG2pQ2M5T9e9VLCEH7cgmj1QPth5a5dYth56Mp+b+eYxqNcDl
+# ooCQjvtrauhXw809cZsMwRSzG4LmY488dTVx2ZMfm0VcDTqB0uh4epTtrSFuq8XZ
+# 9Lup2PSfW/VaXzbrbepdP6/pHY/s3t4UCQXTc+gmip/p+mYQYlMd+EVsk8f9jXCV
+# +mc1DUEhtNYCvc+Mogqm9BaM5bLxeX7Qzc5SgfILAAispRmAYT30052hZq+3tgju
+# KyyukLs5lxfY90NHigzfdSCKL/dUC7c2bfTyRwVSNnRCB1numTB6t7Y/Do3dLoxQ
+# UwaaBzvDHbpottdI/LOANQSRHWNMXQfCnkwjNJ81K1G4WSequrrfe+j2iPd3tKuN
+# IAdEP11aAzxVWz/+iZtsMD2Y/aGCAyAwggMcBgkqhkiG9w0BCQYxggMNMIIDCQIB
 # ATB3MGMxCzAJBgNVBAYTAlVTMRcwFQYDVQQKEw5EaWdpQ2VydCwgSW5jLjE7MDkG
 # A1UEAxMyRGlnaUNlcnQgVHJ1c3RlZCBHNCBSU0E0MDk2IFNIQTI1NiBUaW1lU3Rh
 # bXBpbmcgQ0ECEAVEr/OUnQg5pr/bP1/lYRYwDQYJYIZIAWUDBAIBBQCgaTAYBgkq
-# hkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0yMzA5MDcyMDAw
-# MDFaMC8GCSqGSIb3DQEJBDEiBCBpk1vOh0eNzGyGK0Rk1sYkkMUdfRhaG3KJb3I+
-# OMc3dDANBgkqhkiG9w0BAQEFAASCAgA9TcA2y5nX4WxAAnEqEFwmdDyDa5YLtnMj
-# h0C7fK9OwROoGapKN+fPuJt6o7C1ZXnFM+bL689oo0xnqcvblAiGFbUbh/WqwsGz
-# G9wiRZVk8Ouju8vBrgp4CODSolIRSMIk9AiiQkzbHE6vizzB4F9Ki4PJ9iBJHLzO
-# TTsjed8szu6S/ppMIjVhrgRciBV6hLB05uyCChlnxGJo748bXdhzcHjIlPHS4uMF
-# jwTyv1bqQxTREVau7SWo3NYDtrBA3fxhOv4oehTNV2G4436owcO8622a3Kv638mO
-# OZSHiCifpU1Y5PqUmgWCQ4gCsLWLPzhY+KnVn9WZvyEnjLT+99zbl2kHFllOkpZP
-# lNZpILsBKLIpr2z6Nb4INO2xZ/HvtFW9Mb0xtAeuBUa9Zk3OR/NAkKFTGfKTRKlE
-# gxT1BalMy05JUxtwdvsY6ir+E5R+h3kKqJ/P32OphCzAPaJc2PzsOvotGDhUobqf
-# XbpC6L36yimHh68ug4y0e/lwHnLhDN1CKF9XSbMnAQyInWZ57hqF5h8/2W6RqHHU
-# 0K2tSueET7Qa4kOb/NJxl/S30BIzpndxLCnbTQMN1reyGG3zx1x73d7W3NGTEUM5
-# 8WdycHDy9MBr6mChEjYrxvbnl1D67/19WpgNFF6V85VlpYVnMUFRcfiicu07sY7s
-# I2km1DqB4A==
+# hkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0yMzEwMzAxMzAw
+# MDBaMC8GCSqGSIb3DQEJBDEiBCDiKqCUmeUQ4zXcNe1BHjsdS3h2NTJAYarnl0bf
+# pynb8jANBgkqhkiG9w0BAQEFAASCAgB7kC6js0S/zi6PnDfZWc2hOqdKGBE/gwes
+# OTMghEGCDiH7IvHmc2aoI0M0MXmMHuQH7qnZpi1tOSSeJo4fxRTRzqXSqYy4+LwX
+# D4Z9A0B05LKD80T8D5Y2IO+dJDJJusLg4Ug5kQbbzJVpUeM3MOenJgfPSyU2QCyO
+# LJexkARgkQ79qyczI0JqhOm5HUYD1GzgiHIjqJnrIuea3wiFT+OMu8SF3RTRA3gv
+# rAc1dtMBu07dMxVwBFXWdtYk31sJM25LsY3ibX9+QIqGPEvMBxxX6bECQHd9AG2N
+# MMD6S1IpN+bWiOPLS2dSnho1ebT3+pdvI97fHJmbECXYRpFuBJkjICIHNerlJP8j
+# 2x1K7E3UlP5SI3m6EKMO9QPdmjVfU3ER7XZ9dHuLW+WE7A+HBvankQZ88S/Vuo2u
+# Zie8Kg0o5u7IF4yp4nBo/IXATXN2mi2MUdolOuh+mKDf8rbX6jXR9ljwqUKNR4Q1
+# 1NnStyiG7hiOQo+kNogEDPmmMKv5o3IDFmGJv1SldlkIMo/9rFgaRB3kv5Td+Iyy
+# REHC9qnbJ7jtfOutalSiiM5F5zPNcxBVt1Elx3trGdMxJ0m3pCrzg6CFB43kVstR
+# gDkqy+pe1bquESxwo2sZ7Bhqcc+ksOxqOWQtsTwfebdKSPEFL5yTBRvO8v1D5x/n
+# wevPxd6SSg==
 # SIG # End signature block
