@@ -322,7 +322,7 @@ function Set-CAExtension
                 (@{
                     'strExtensionName' = '2.5.29.15'
                     'Type' = [PROPTYPE]::BINARY
-                    'Flags' = [POLICY]::CRITICAL
+                    'Flags' = [POLICY]::NON_CRITICAL
                     'pvarValue' = (
                         ConvertTo-DERstring -Bytes (
                             [Convert]::FromBase64String($X509Ext.RawData(1))
@@ -362,7 +362,7 @@ function Set-CAExtension
                 (@{
                     'strExtensionName' = '2.5.29.37'
                     'Type' = [PROPTYPE]::BINARY
-                    'Flags' = [POLICY]::CRITICAL
+                    'Flags' = [POLICY]::NON_CRITICAL
                     'pvarValue' = (
                         ConvertTo-DERstring -Bytes (
                             [Convert]::FromBase64String($X509Ext.RawData(1))
@@ -406,7 +406,7 @@ function Set-CAExtension
                 (@{
                     'strExtensionName' = '2.5.29.32'
                     'Type' = [PROPTYPE]::BINARY
-                    'Flags' = [POLICY]::CRITICAL
+                    'Flags' = [POLICY]::NON_CRITICAL
                     'pvarValue' = (
                         ConvertTo-DERstring -Bytes (
                             [Convert]::FromBase64String($X509Ext.RawData(1))
