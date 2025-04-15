@@ -431,6 +431,7 @@ function Set-CAExtension
 
                 if ($PathLength -like $null)
                 {
+                    # Default to "None"
                     $PathLength = -1
                 }
 
